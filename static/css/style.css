@@ -1,0 +1,302 @@
+/* ==========================================================================
+   1. ПЕРЕМЕННЫЕ И ПАЛИТРА СТИЛЯ GRUVBOX MATERIAL (DARK MEDIUM)
+   ========================================================================== */
+:root {
+    --bg0: #1d2021;       /* Глубокий темный фон приложения */
+    --bg1: #282828;       /* Фон карточек, панелей и блоков */
+    --bg2: #32302f;       /* Фон полей ввода, списков и кнопок в покое */
+    --bg3: #3c3836;       /* Элементы при наведении */
+    
+    --fg0: #fbf1c7;       /* Основной кремовый текст (максимальный контраст) */
+    --fg1: #ddc7a1;       /* Вторичный приглушенный текст */
+    
+    /* Акцентные пастельные цвета Gruvbox */
+    --red: #ea6962;       /* Ошибки, отказы, критические действия */
+    --green: #a9b665;     /* Одобрено, успех, создание */
+    --yellow: #d8a657;    /* В процессе проверки, предупреждения */
+    --blue: #7daea3;      /* Информационные ссылки, фокус полей, код */
+    --orange: #e78a4e;    /* Главные акценты, заголовки, арбитраж */
+    --purple: #d3869b;    /* Административные функции, роли */
+    --gray: #928374;      /* Мелкий служебный текст, даты, границы */
+}
+
+/* ==========================================================================
+   2. СБРОС СТИЛЕЙ И БАЗОВЫЕ НАСТРОЙКИ
+   ========================================================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg0);
+    color: var(--fg0);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    padding-bottom: 3rem;
+}
+
+/* ==========================================================================
+   3. КОМПОНЕНТЫ НАВИГАЦИИ (NAVBAR)
+   ========================================================================== */
+.navbar {
+    background-color: var(--bg1);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--bg2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: var(--orange);
+    font-size: 1.3rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.navbar-user {
+    color: var(--fg1);
+    font-size: 0.95rem;
+}
+
+.navbar-user strong {
+    color: var(--purple);
+}
+
+.logout-link {
+    color: var(--red);
+    text-decoration: none;
+    margin-left: 15px;
+    font-weight: 600;
+    border-bottom: 1px dashed transparent;
+    transition: border-color 0.2s ease;
+}
+
+.logout-link:hover {
+    border-color: var(--red);
+}
+
+/* ==========================================================================
+   4. СЕТКА И СТРУКТУРНЫЕ КОНТЕЙНЕРЫ
+   ========================================================================== */
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+/* ==========================================================================
+   5. ЭЛЕМЕНТЫ ФОРМ И УПРАВЛЕНИЯ
+   ========================================================================== */
+.form-card {
+    background-color: var(--bg1);
+    border: 1px solid var(--bg3);
+    border-radius: 6px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--fg1);
+    font-size: 0.95rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--bg2);
+    border: 1px solid var(--gray);
+    color: var(--fg0);
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(125, 174, 163, 0.2);
+}
+
+/* Специфика для textarea и select */
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+select.form-control {
+    cursor: pointer;
+    appearance: none; /* Убираем дефолтную стрелку */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23ddc7a1'><polygon points='0,0 10,0 5,5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+}
+
+/* ==========================================================================
+   6. КНОПКИ (BUTTONS)
+   ========================================================================== */
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary { background-color: var(--blue); color: var(--bg0); }
+.btn-success { background-color: var(--green); color: var(--bg0); }
+.btn-danger  { background-color: var(--red); color: var(--bg0); }
+.btn-warning { background-color: var(--yellow); color: var(--bg0); }
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+/* ==========================================================================
+   7. УВЕДОМЛЕНИЯ И АЛЕРТЫ (FLASH SYSTEM)
+   ========================================================================== */
+.alert {
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-left: 4px solid transparent;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.alert-danger  { background-color: #3a2525; color: var(--red); border-left-color: var(--red); }
+.alert-success { background-color: #2b3026; color: var(--green); border-left-color: var(--green); }
+.alert-warning { background-color: #352f25; color: var(--yellow); border-left-color: var(--yellow); }
+
+/* ==========================================================================
+   8. ЛЕНТА ПОСТОВ (СТЕНА ПОРТФОЛИО) И СТАТУСЫ
+   ========================================================================== */
+.post-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.post-card {
+    background-color: var(--bg1);
+    border-left: 5px solid var(--gray); /* Базовый цвет рамки по умолчанию */
+    border-radius: 0 6px 6px 0;
+    padding: 1.5rem;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transition: transform 0.2s ease;
+}
+
+/* Динамическое изменение цвета левой рамки карточки на основе её статуса */
+.post-card.pending   { border-left-color: var(--yellow); }
+.post-card.approved  { border-left-color: var(--green); }
+.post-card.rejected  { border-left-color: var(--red); }
+.post-card.disputed  { border-left-color: var(--orange); } /* Пост ушел в комиссию на арбитраж */
+
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Кастомные бэйджи статусов */
+.status-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-pending  { background-color: var(--yellow); color: var(--bg0); }
+.badge-approved { background-color: var(--green); color: var(--bg0); }
+.badge-rejected { background-color: var(--red); color: var(--bg0); }
+.badge-disputed { background-color: var(--orange); color: var(--bg0); }
+
+/* ==========================================================================
+   9. ТАБЛИЦЫ ДЛЯ АДМИН-ПАНЕЛИ (ЕСЛИ НЕОБХОДИМО)
+   ========================================================================== */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    background-color: var(--bg1);
+    border: 1px solid var(--bg3);
+    border-radius: 6px;
+    margin-top: 1.5rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+th, td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--bg2);
+}
+
+th {
+    background-color: var(--bg2);
+    color: var(--orange);
+    font-weight: 600;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background-color: var(--bg3);
+}
+
+/* ==========================================================================
+   10. СЛУЖЕБНЫЕ МЕДИА-ЗАПРОСЫ (АДАПТИВНОСТЬ)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .container {
+        margin: 1rem auto;
+    }
+    
+    .form-card {
+        padding: 1.25rem;
+    }
+    
+    .post-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
