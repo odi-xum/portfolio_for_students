@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Архив решений — ИС Портфолио{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="color: var(--purple); margin: 0;">📚 Архив и история решений комиссии</h1>
+    <a href="{{ url_for('commission_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← На панель</a>
+</div>
+
+<h3 style="color: var(--fg1); margin-bottom: 1rem;">Архив арбитража публикаций</h3>
+<div class="table-responsive" style="margin-bottom: 3rem;">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Студент</th>
+                <th>Название публикации</th>
+                <th>Дата вердикта</th>
+                <th>Итог комиссии</th>
+                <th>Комментарий комиссии</th>
+                <th style="text-align: right;">Действие</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in resolved_events %}
+            <tr>
+                <td>{{ event.id }}</td>
+                <td>{{ event.student.username if event.student else 'Неизвестен' }}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ event.title }}</td>
+                <td>{{ event.commission_reviewed_at.strftime('%d.%m.%Y %H:%M') if event.commission_reviewed_at }}</td>
+                <td>
+                    {% if event.status == 'approved' %}
+                        <span style="color: var(--green); font-weight: bold;">Одобрено поверх куратора</span>
+                    {% else %}
+                        <span style="color: var(--red);">Отклонение подтверждено</span>
+                    {% endif %}
+                </td>
+                <td style="font-style: italic; color: var(--gray);">{{ event.commission_comment or '—' }}</td>
+                <td style="text-align: right;">
+                    <form action="/commission/reconsider_event/{{ event.id }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn" style="background-color: var(--bg2); color: var(--yellow); padding: 0.25rem 0.5rem; font-size: 0.85rem; border: 1px solid var(--yellow); cursor: pointer;">
+                            Пересмотреть
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--gray);">Комиссия еще не выносила решений по публикациям.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h3 style="color: var(--fg1); margin-bottom: 1rem;">Архив решений по стипендиям</h3>
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>ID заявки</th>
+                <th>Студент</th>
+                <th>Группа</th>
+                <th>Дата вердикта</th>
+                <th>Статус решения</th>
+                <th style="text-align: right;">Действие</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in resolved_scholarships %}
+            <tr>
+                <td>{{ req.id }}</td>
+                <td style="font-weight: bold;">{{ req.student.username if req.student else 'Удален' }}</td>
+                <td>{{ req.student.group_name if (req.student and req.student.group_name) else '—' }}</td>
+                <td>{{ req.commission_reviewed_at.strftime('%d.%m.%Y %H:%M') if req.commission_reviewed_at }}</td>
+                <td>
+                    {% if req.status == 'approved' %}
+                        <span style="color: var(--green); font-weight: bold;">Стипендия назначена</span>
+                    {% else %}
+                        <span style="color: var(--red);">Отказано</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">
+                    <form action="/commission/reconsider_scholarship/{{ req.id }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn" style="background-color: var(--bg2); color: var(--yellow); padding: 0.25rem 0.5rem; font-size: 0.85rem; border: 1px solid var(--yellow); cursor: pointer;">
+                            Пересмотреть
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; color: var(--gray);">Комиссия еще не выносила решений по стипендиям.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

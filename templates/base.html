@@ -11,9 +11,41 @@
     <nav class="navbar">
         <div class="navbar-brand">ИС Портфолио</div>
         <div class="navbar-user">
-            Роль: <strong>{{ current_user.role }}</strong> | Логин: {{ current_user.username }}
+            <a href="{{ url_for('notifications') }}" style="color: var(--fg1); text-decoration: none; margin-right: 1rem; position: relative;">
+                🔔 <span id="unread-badge" style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:0.7rem; font-weight:bold; border-radius:50%; min-width:16px; height:16px; text-align:center; line-height:16px; padding:0 3px;"></span>
+            </a>
+            Роль: <strong>{{ current_user.role }}</strong> |
+            {% if current_user.last_name or current_user.first_name %}
+            {{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}
+            {% else %}
+            {{ current_user.username }}
+            {% endif %}
             <a href="{{ url_for('logout') }}" class="logout-link">Выйти</a>
         </div>
+    </nav>
+    
+    <!-- Role-based navigation -->
+    <nav class="role-nav">
+        <ul>
+            {% if current_user.role == 'admin' %}
+            <li><a href="{{ url_for('admin_dashboard') }}">Панель</a></li>
+            <li><a href="{{ url_for('admin_users') }}">Пользователи</a></li>
+            <li><a href="{{ url_for('admin_groups') }}">Группы</a></li>
+            {% elif current_user.role == 'student' %}
+            <li><a href="{{ url_for('student_dashboard') }}">Моя панель</a></li>
+            <li><a href="{{ url_for('student_create') }}">Создать пост</a></li>
+            <li><a href="{{ url_for('student_history') }}">История</a></li>
+            {% elif current_user.role == 'curator' %}
+            <li><a href="{{ url_for('curator_dashboard') }}">Панель куратора</a></li>
+            <li><a href="{{ url_for('curator_pending') }}">Заявки</a></li>
+            <li><a href="{{ url_for('curator_resolved') }}">Журнал</a></li>
+            {% elif current_user.role == 'commission' %}
+            <li><a href="{{ url_for('commission_dashboard') }}">Панель комиссии</a></li>
+            <li><a href="{{ url_for('commission_disputes') }}">Споры</a></li>
+            <li><a href="{{ url_for('commission_scholarships') }}">Стипендии</a></li>
+            <li><a href="{{ url_for('commission_archive') }}">Архив</a></li>
+            {% endif %}
+        </ul>
     </nav>
     {% endif %}
 
@@ -30,6 +62,94 @@
         <!-- Место для динамического контента -->
         {% block content %}{% endblock %}
     </div>
+
+
+<!-- Lightbox предпросмотра изображений -->
+<div id="lightbox-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9999; cursor:pointer;" onclick="closeLightbox(event)">
+    <button onclick="closeLightbox()" style="position:absolute; top:1rem; right:1.5rem; color:#fff; font-size:2.5rem; background:none; border:none; cursor:pointer; z-index:10001; line-height:1; padding:0.25rem;" title="Закрыть (Esc)">&times;</button>
+    <div style="position:absolute; bottom:1.5rem; left:50%; transform:translateX(-50%); color:var(--gray); font-size:0.85rem; z-index:10001; text-align:center; pointer-events:none;">
+        Клик по изображению &mdash; приблизить/отдалить &middot; Клик вне изображения или Esc &mdash; закрыть
+    </div>
+    <img id="lightbox-img" style="max-width:90vw; max-height:90vh; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); object-fit:contain; cursor:zoom-in; border-radius:4px; box-shadow:0 0 30px rgba(0,0,0,0.5);" onclick="toggleZoom(event)">
+</div>
+
+<script>
+(function() {
+    var overlay = document.getElementById('lightbox-overlay');
+    var img = document.getElementById('lightbox-img');
+    var zoomed = false;
+
+    window.openLightbox = function(src) {
+        img.src = src;
+        img.style.maxWidth = '90vw';
+        img.style.maxHeight = '90vh';
+        img.style.width = '';
+        img.style.height = '';
+        img.style.cursor = 'zoom-in';
+        zoomed = false;
+        overlay.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.closeLightbox = function(e) {
+        if (e && e.target !== overlay && e.target !== overlay.querySelector('button')) {
+            return;
+        }
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        img.src = '';
+        zoomed = false;
+    };
+
+    window.toggleZoom = function(e) {
+        e.stopPropagation();
+        if (!zoomed) {
+            img.style.maxWidth = 'none';
+            img.style.maxHeight = 'none';
+            img.style.width = 'auto';
+            img.style.height = 'auto';
+            img.style.cursor = 'zoom-out';
+            zoomed = true;
+        } else {
+            img.style.maxWidth = '90vw';
+            img.style.maxHeight = '90vh';
+            img.style.width = '';
+            img.style.height = '';
+            img.style.cursor = 'zoom-in';
+            zoomed = false;
+        }
+    };
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.style.display === 'block') {
+            closeLightbox();
+        }
+    });
+})();
+</script>
+
+<script>
+(function() {
+    function updateBadge() {
+        fetch('/api/notifications/count')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var badge = document.getElementById('unread-badge');
+                if (data.unread > 0) {
+                    badge.textContent = data.unread > 99 ? '99+' : data.unread;
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
+            })
+            .catch(function() {});
+    }
+    updateBadge();
+    setInterval(updateBadge, 15000);
+})();
+</script>
+
+{% block scripts %}{% endblock %}
 
 </body>
 </html>

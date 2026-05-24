@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Разрешение споров — ИС Портфолио{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="color: var(--purple); margin: 0;">⚔️ Разрешение споров</h1>
+    <a href="{{ url_for('commission_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← На панель</a>
+</div>
+
+<div class="post-grid" style="margin-bottom: 3rem;">
+    {% for event in disputed_events %}
+    <div class="post-card disputed" style="padding: 2rem; background-color: var(--bg1); margin-bottom: 1rem; border-left: 4px solid var(--purple);">
+        <div class="post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div>
+                <h3 style="color: var(--fg0); margin: 0 0 0.5rem 0;">{{ event.title }}</h3>
+                <small style="color: var(--gray);">
+                    Автор: <strong>{{ event.student.username if event.student else 'Удаленный пользователь' }}</strong> 
+                    (Группа: {{ event.student.group_name if (event.student and event.student.group_name) else '—' }}) | ID поста: {{ event.id }}
+                </small>
+            </div>
+            <span class="status-badge" style="background-color: var(--purple); color: var(--bg0); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">Арбитраж</span>
+        </div>
+
+        <div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
+            <strong style="color: var(--blue); display: block; margin-bottom: 0.25rem;">Описание студента:</strong>
+            <p style="white-space: pre-wrap; margin: 0;">{{ event.description or 'Без описания.' }}</p>
+        </div>
+
+        <div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--red);">
+            <strong style="color: var(--red); display: block; margin-bottom: 0.25rem;">Причина отклонения куратором:</strong>
+            <p style="font-style: italic; margin: 0;">{{ event.curator_comment or 'Причина не указана.' }}</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
+            <strong style="color: var(--fg1); display: block; margin-bottom: 0.25rem;">Документы-доказательства:</strong>
+            <ul style="list-style: none; padding-left: 0; margin: 0;">
+                {% for file in event.files %}
+                <li style="margin-bottom: 0.35rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                    {% if file.file_type in ['png', 'jpg', 'jpeg'] %}
+                    <a href="#" onclick="openLightbox('/diplom/{{ file.file_path.split('diplom/')[-1] }}'); return false;" style="display: inline-block;">
+                        <img src="/diplom/{{ file.file_path.split('diplom/')[-1] }}" style="height: 60px; width: auto; border-radius: 4px; cursor: pointer; border: 1px solid var(--gray);" title="Нажмите для предпросмотра">
+                    </a>
+                    {% else %}
+                    <span style="color: var(--gray);">[PDF]</span>
+                    <a href="/diplom/{{ file.file_path.split('diplom/')[-1] }}" target="_blank" style="color: var(--blue); text-decoration: underline;">
+                        Скачать PDF
+                    </a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <form action="/commission/resolve_dispute/{{ event.id }}" method="POST" style="border-top: 1px solid var(--bg2); padding-top: 1rem;">
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="com_comment-{{ event.id }}" style="display: block; margin-bottom: 0.5rem;">Вердикт комиссии (комментарий):</label>
+                <input type="text" id="com_comment-{{ event.id }}" name="commission_comment" class="form-control" required 
+                       placeholder="Укажите аргументы решения..." style="width: 100%; box-sizing: border-box;">
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" name="decision" value="confirm_reject" class="btn btn-danger">Оставить отклоненным</button>
+                <button type="submit" name="decision" value="overrule_approve" class="btn btn-success">Одобрить пост</button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; background-color: var(--bg1); border-radius: 6px; border: 1px dashed var(--gray);">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">✅</div>
+        <p style="color: var(--gray); margin: 0;">Нет спорных постов, требующих вмешательства комиссии.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

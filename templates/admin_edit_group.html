@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактирование группы — ИС Портфолио{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="color: var(--orange); margin: 0;">✏️ Редактирование группы</h1>
+    <a href="{{ url_for('admin_groups') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← Назад к группам</a>
+</div>
+
+<!-- Информационная карточка -->
+<div class="form-card" style="margin-bottom: 2rem;">
+    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+        <div style="font-size: 2.5rem; line-height: 1;">🏛️</div>
+        <div>
+            <h2 style="color: var(--fg0); margin: 0 0 0.25rem 0;">{{ group.name }}</h2>
+            <p style="color: var(--gray); margin: 0;">
+                {{ group.specialty_name }} ({{ group.specialty_code }})
+                {% if group.group_number %} · №{{ group.group_number }}{% endif %}
+                · {{ group.course }} курс
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Форма редактирования -->
+<div class="form-card">
+    <h3 style="margin-bottom: 1.5rem; color: var(--blue); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
+        Параметры группы
+    </h3>
+
+    <form method="POST" action="{{ url_for('admin_edit_group', group_id=group.id) }}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+
+            <div class="form-group" style="margin: 0;">
+                <label for="group_number">Номер группы</label>
+                <input type="text" id="group_number" name="group_number" class="form-control"
+                       value="{{ group.group_number or '' }}" placeholder="232 / 232а">
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label for="course">Курс</label>
+                <select id="course" name="course" class="form-control">
+                    {% for c in range(1, 5) %}
+                    <option value="{{ c }}" {{ 'selected' if group.course == c }}>{{ c }} курс</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label for="department">Отделение</label>
+                <input type="text" id="department" name="department" class="form-control"
+                       value="{{ group.department or '' }}" placeholder="ИТ-отделение">
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label for="form_of_study">Форма обучения</label>
+                <select id="form_of_study" name="form_of_study" class="form-control">
+                    <option value="очная" {{ 'selected' if group.form_of_study == 'очная' }}>Очная</option>
+                    <option value="заочная" {{ 'selected' if group.form_of_study == 'заочная' }}>Заочная</option>
+                    <option value="очно-заочная" {{ 'selected' if group.form_of_study == 'очно-заочная' }}>Очно-заочная</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label for="curator_id">Куратор группы</label>
+                <select id="curator_id" name="curator_id" class="form-control">
+                    <option value="">— Не назначен —</option>
+                    {% for c in curators %}
+                    <option value="{{ c.id }}" {{ 'selected' if group.curator_id == c.id }}>{{ c.last_name or c.username }} {{ c.first_name or '' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label for="start_date">Начало обучения</label>
+                <input type="date" id="start_date" name="start_date" class="form-control"
+                       value="{{ group.start_date.strftime('%Y-%m-%d') if group.start_date else '' }}">
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label for="end_date">Окончание обучения</label>
+                <input type="date" id="end_date" name="end_date" class="form-control"
+                       value="{{ group.end_date.strftime('%Y-%m-%d') if group.end_date else '' }}">
+            </div>
+
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-success">💾 Сохранить изменения</button>
+            <a href="{{ url_for('admin_groups') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

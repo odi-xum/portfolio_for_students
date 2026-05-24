@@ -81,6 +81,45 @@ body {
     border-color: var(--red);
 }
 
+/* Role-based navigation */
+.role-nav {
+    background-color: var(--bg2);
+    padding: 0.75rem 2rem;
+    border-top: 1px solid var(--bg3);
+}
+
+.role-nav ul {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+    margin: 0;
+}
+
+.role-nav li {
+    display: inline;
+}
+
+.role-nav a {
+    color: var(--fg1);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.role-nav a:hover {
+    color: var(--fg0);
+    border-bottom-color: var(--orange);
+}
+
+/* Active page indicator (optional, can be enhanced with JS or template logic) */
+.role-nav .active {
+    color: var(--fg0);
+    border-bottom-color: var(--orange);
+}
+
 /* ==========================================================================
    4. СЕТКА И СТРУКТУРНЫЕ КОНТЕЙНЕРЫ
    ========================================================================== */

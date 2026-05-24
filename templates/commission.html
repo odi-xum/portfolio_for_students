@@ -3,203 +3,78 @@
 {% block title %}Панель комиссии — ИС Портфолио{% endblock %}
 
 {% block content %}
-<h1 style="color: var(--orange); margin-bottom: 2rem;">Панель аттестационной комиссии</h1>
-
-<!-- ========================================== -->
-<!-- БЛОК ПОРУЧЕНИЙ: ТРЕБУЕТСЯ ДЕЙСТВИЕ         -->
-<!-- ========================================== -->
-<h2 style="margin-bottom: 1.5rem; color: var(--fg1); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-    Разрешение споров (Арбитраж постов)
-</h2>
-
-<div class="post-grid" style="margin-bottom: 3rem;">
-    {% for event in disputed_events %}
-    <div class="post-card disputed" style="padding: 2rem; background-color: var(--bg1); margin-bottom: 1rem; border-left: 4px solid var(--purple);">
-        <div class="post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div>
-                <h3 style="color: var(--fg0); margin: 0 0 0.5rem 0;">{{ event.title }}</h3>
-                <small style="color: var(--gray);">
-                    Автор: <strong>{{ event.student.username if event.student else 'Удаленный пользователь' }}</strong> 
-                    (Группа: {{ event.student.group_name if (event.student and event.student.group_name) else '—' }}) | ID поста: {{ event.id }}
-                </small>
-            </div>
-            <span class="status-badge" style="background-color: var(--purple); color: var(--bg0); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">Арбитраж</span>
+<!-- Приветственная карточка -->
+<div class="form-card" style="margin-bottom: 2.5rem;">
+    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+        <div style="font-size: 3rem; line-height: 1;">⚖️</div>
+        <div>
+            <h2 style="color: var(--fg0); margin: 0 0 0.5rem 0;">Добро пожаловать, {{ current_user.username }}</h2>
+            <p style="color: var(--fg1); margin: 0;">
+                Панель аттестационной комиссии. Разрешайте спорные ситуации по публикациям
+                и принимайте финальные решения по заявкам на повышенную стипендию.
+            </p>
         </div>
-
-        <div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
-            <strong style="color: var(--blue); display: block; margin-bottom: 0.25rem;">Описание студента:</strong>
-            <p style="white-space: pre-wrap; margin: 0;">{{ event.description or 'Без описания.' }}</p>
-        </div>
-
-        <div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--red);">
-            <strong style="color: var(--red); display: block; margin-bottom: 0.25rem;">Причина отклонения куратором:</strong>
-            <p style="font-style: italic; margin: 0;">{{ event.curator_comment or 'Причина не указана.' }}</p>
-        </div>
-
-        <div style="margin-bottom: 1.5rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
-            <strong style="color: var(--fg1); display: block; margin-bottom: 0.25rem;">Документы-доказательства:</strong>
-            <ul style="list-style: none; padding-left: 0; margin: 0;">
-                {% for file in event.files %}
-                <li style="margin-bottom: 0.25rem;">
-                    <span style="color: var(--gray);">[{{ file.file_type.upper() }}]</span>
-                    <a href="/diplom/{{ file.file_path.split('diplom/')[-1] }}" target="_blank" style="color: var(--blue); text-decoration: underline;">
-                        Открыть файл доказательства
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <form action="/commission/resolve_dispute/{{ event.id }}" method="POST" style="border-top: 1px solid var(--bg2); padding-top: 1rem;">
-            <div class="form-group" style="margin-bottom: 1rem;">
-                <label for="com_comment-{{ event.id }}" style="display: block; margin-bottom: 0.5rem;">Вердикт комиссии (комментарий):</label>
-                <input type="text" id="com_comment-{{ event.id }}" name="commission_comment" class="form-control" required 
-                       placeholder="Укажите аргументы решения..." style="width: 100%; box-sizing: border-box;">
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                <button type="submit" name="decision" value="confirm_reject" class="btn btn-danger">Оставить отклоненным</button>
-                <button type="submit" name="decision" value="overrule_approve" class="btn btn-success">Одобрить пост</button>
-            </div>
-        </form>
     </div>
-    {% else %}
-        <p style="color: var(--gray); font-style: italic; margin-bottom: 2rem;">Нет спорных постов, требующих вмешательства.</p>
-    {% endfor %}
 </div>
 
-<h2 style="margin-bottom: 1.5rem; color: var(--fg1); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-    Заявки на повышенную стипендию
-</h2>
-
-<div class="table-responsive" style="margin-bottom: 4rem;">
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Студент</th>
-                <th>Группа</th>
-                <th>Дата подачи</th>
-                <th>Статус</th>
-                <th style="text-align: right;">Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for req in scholarship_requests %}
-            <tr>
-                <td>{{ req.id }}</td>
-                <td style="font-weight: bold; color: var(--fg0);">{{ req.student.username if req.student else 'Удаленный аккаунт' }}</td>
-                <td>{{ req.student.group_name if (req.student and req.student.group_name) else '—' }}</td>
-                <td>{{ req.created_at.strftime('%d.%m.%Y') }}</td>
-                <td><span style="color: var(--yellow);">Ожидает проверки</span></td>
-                <td style="text-align: right;">
-                    <form action="/commission/scholarship_decision/{{ req.id }}" method="POST" style="display: inline-block;">
-                        <button type="submit" name="decision" value="approve" class="btn btn-success" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">Назначить</button>
-                        <button type="submit" name="decision" value="reject" class="btn btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">Отказать</button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" style="text-align: center; color: var(--gray);">Нет активных запросов на стипендию.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- Быстрая статистика -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">⚡</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Активных споров</div>
+        <div style="color: var(--purple); font-size: 1.75rem; font-weight: bold;">{{ active_disputes }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">📋</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Заявок на стипендию</div>
+        <div style="color: var(--yellow); font-size: 1.75rem; font-weight: bold;">{{ active_scholarships }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">🏛️</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Решено споров</div>
+        <div style="color: var(--green); font-size: 1.75rem; font-weight: bold;">{{ resolved_events_count }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">📜</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Решено стипендий</div>
+        <div style="color: var(--green); font-size: 1.75rem; font-weight: bold;">{{ resolved_scholarships_count }}</div>
+    </div>
 </div>
 
-<!-- ========================================== -->
-<!-- БЛОК ИСТОРИИ: ЖУРНАЛ ДЕЙСТВИЙ И ПЕРЕСМОТР  -->
-<!-- ========================================== -->
-<hr style="border: 0; border-top: 2px dashed var(--bg2); margin-bottom: 3rem;">
-<h1 style="color: var(--purple); margin-bottom: 2rem;">Архив и история решений комиссии</h1>
+<!-- Быстрые действия -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
 
-<h3 style="color: var(--fg1); margin-bottom: 1rem;">Архив арбитража публикаций</h3>
-<div class="table-responsive" style="margin-bottom: 3rem;">
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Студент</th>
-                <th>Название публикации</th>
-                <th>Дата вердикта</th>
-                <th>Итог комиссии</th>
-                <th>Комментарий комиссии</th>
-                <th style="text-align: right;">Действие</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for event in resolved_events %}
-            <tr>
-                <td>{{ event.id }}</td>
-                <td>{{ event.student.username if event.student else 'Неизвестен' }}</td>
-                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ event.title }}</td>
-                <td>{{ event.commission_reviewed_at.strftime('%d.%m.%Y %H:%M') if event.commission_reviewed_at }}</td>
-                <td>
-                    {% if event.status == 'approved' %}
-                        <span style="color: var(--green); font-weight: bold;">Одобрено поверх куратора</span>
-                    {% else %}
-                        <span style="color: var(--red);">Отклонение подтверждено</span>
-                    {% endif %}
-                </td>
-                <td style="font-style: italic; color: var(--gray);">{{ event.commission_comment or '—' }}</td>
-                <td style="text-align: right;">
-                    <form action="/commission/reconsider_event/{{ event.id }}" method="POST" style="display:inline;">
-                        <button type="submit" class="btn" style="background-color: var(--bg2); color: var(--yellow); padding: 0.25rem 0.5rem; font-size: 0.85rem; border: 1px solid var(--yellow); cursor: pointer;">
-                            Пересмотреть
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="7" style="text-align: center; color: var(--gray);">Комиссия еще не выносила решений по публикациям.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <a href="{{ url_for('commission_disputes') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">⚔️</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Разрешение споров</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Арбитраж постов, отклонённых куратором</p>
+        </div>
+    </a>
 
-<h3 style="color: var(--fg1); margin-bottom: 1rem;">Архив решений по стипендиям</h3>
-<div class="table-responsive">
-    <table>
-        <thead>
-            <tr>
-                <th>ID заявки</th>
-                <th>Студент</th>
-                <th>Группа</th>
-                <th>Дата вердикта</th>
-                <th>Статус решения</th>
-                <th style="text-align: right;">Действие</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for req in resolved_scholarships %}
-            <tr>
-                <td>{{ req.id }}</td>
-                <td style="font-weight: bold;">{{ req.student.username if req.student else 'Удален' }}</td>
-                <td>{{ req.student.group_name if (req.student and req.student.group_name) else '—' }}</td>
-                <td>{{ req.commission_reviewed_at.strftime('%d.%m.%Y %H:%M') if req.commission_reviewed_at }}</td>
-                <td>
-                    {% if req.status == 'approved' %}
-                        <span style="color: var(--green); font-weight: bold;">Стипендия назначена</span>
-                    {% else %}
-                        <span style="color: var(--red);">Отказано</span>
-                    {% endif %}
-                </td>
-                <td style="text-align: right;">
-                    <form action="/commission/reconsider_scholarship/{{ req.id }}" method="POST" style="display:inline;">
-                        <button type="submit" class="btn" style="background-color: var(--bg2); color: var(--yellow); padding: 0.25rem 0.5rem; font-size: 0.85rem; border: 1px solid var(--yellow); cursor: pointer;">
-                            Пересмотреть
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" style="text-align: center; color: var(--gray);">Комиссия еще не выносила решений по стипендиям.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <a href="{{ url_for('commission_scholarships') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">🏆</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Заявки на стипендию</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Рассмотрение запросов на повышенную стипендию</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('commission_archive') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">📚</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Архив решений</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">История вынесенных вердиктов с возможностью пересмотра</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('commission_export') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">📊</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Экспорт в Excel</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Сводка по группам, детализация и графики</p>
+        </div>
+    </a>
+
 </div>
 {% endblock %}

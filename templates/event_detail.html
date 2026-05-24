@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ event.title }} — ИС Портфолио{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <a href="javascript:history.back()" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none; margin-bottom: 0.5rem; display: inline-block;">← Назад</a>
+        <h1 style="color: var(--fg0); margin: 0.5rem 0 0 0;">{{ event.title }}</h1>
+    </div>
+    <span class="status-badge badge-{{ event.status }}">
+        {% if event.status == 'pending' %}На проверке
+        {% elif event.status == 'approved' %}Одобрено
+        {% elif event.status == 'rejected' %}Отклонено
+        {% elif event.status == 'disputed' %}В комиссии
+        {% else %}{{ event.status }}{% endif %}
+    </span>
+</div>
+
+<div class="form-card" style="margin-bottom: 2rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; font-size: 0.95rem;">
+        <div>
+            <span style="color: var(--gray);">Студент:</span>
+            <strong style="color: var(--fg0);">{{ event.student.username if event.student else 'Удален' }}</strong>
+        </div>
+        <div>
+            <span style="color: var(--gray);">Группа:</span>
+            <strong style="color: var(--fg0);">{{ event.student.group_name if (event.student and event.student.group_name) else '—' }}</strong>
+        </div>
+        <div>
+            <span style="color: var(--gray);">ID поста:</span>
+            <strong style="color: var(--fg0);">{{ event.id }}</strong>
+        </div>
+        <div>
+            <span style="color: var(--gray);">Дата создания:</span>
+            <strong style="color: var(--fg0);">{{ event.created_at.strftime('%d.%m.%Y %H:%M') if event.created_at else '—' }}</strong>
+        </div>
+        {% if event.commission_reviewed_at %}
+        <div>
+            <span style="color: var(--gray);">Дата вердикта:</span>
+            <strong style="color: var(--orange);">{{ event.commission_reviewed_at.strftime('%d.%m.%Y %H:%M') }}</strong>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-bottom: 1.5rem; background-color: var(--bg2); padding: 1rem; border-radius: 4px;">
+        <strong style="color: var(--blue); display: block; margin-bottom: 0.5rem;">Описание:</strong>
+        <p style="white-space: pre-wrap; margin: 0; color: var(--fg1);">{{ event.description or 'Описание не добавлено.' }}</p>
+    </div>
+
+    <div style="margin-bottom: 1.5rem; background-color: var(--bg2); padding: 1rem; border-radius: 4px;">
+        <strong style="color: var(--fg1); display: block; margin-bottom: 0.5rem;">Прикрепленные документы:</strong>
+        <ul style="list-style: none; padding-left: 0; margin: 0;">
+            {% for file in event.files %}
+            <li style="margin-bottom: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                {% if file.file_type in ['png', 'jpg', 'jpeg'] %}
+                <a href="#" onclick="openLightbox('/diplom/{{ file.file_path.split('diplom/')[-1] }}'); return false;" style="display: inline-block;">
+                    <img src="/diplom/{{ file.file_path.split('diplom/')[-1] }}" style="height: 80px; width: auto; border-radius: 4px; cursor: pointer; border: 1px solid var(--gray);" title="Нажмите для предпросмотра">
+                </a>
+                {% else %}
+                <span style="color: var(--gray);">[PDF]</span>
+                <a href="/diplom/{{ file.file_path.split('diplom/')[-1] }}" target="_blank" style="color: var(--blue); text-decoration: underline;">Скачать PDF</a>
+                {% endif %}
+            </li>
+            {% else %}
+            <li style="color: var(--gray); font-style: italic;">Файлы не прикреплены.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Обратная связь -->
+    {% if event.score or event.curator_comment or event.commission_comment %}
+    <div style="border-top: 1px solid var(--bg2); padding-top: 1.5rem;">
+        <h3 style="color: var(--fg1); margin-bottom: 1rem;">Обратная связь</h3>
+        
+        {% if event.score %}
+        <div style="margin-bottom: 0.75rem;">
+            <span style="color: var(--gray);">Оценка:</span>
+            <strong style="color: var(--green); font-size: 1.2rem;">{{ event.score }} / 5</strong>
+        </div>
+        {% endif %}
+        
+        {% if event.curator_comment %}
+        <div style="margin-bottom: 0.75rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
+            <strong style="color: var(--fg1); display: block; margin-bottom: 0.25rem;">Комментарий куратора:</strong>
+            <p style="font-style: italic; margin: 0; color: var(--fg1);">{{ event.curator_comment }}</p>
+        </div>
+        {% endif %}
+        
+        {% if event.commission_comment %}
+        <div style="background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
+            <strong style="color: var(--orange); display: block; margin-bottom: 0.25rem;">Решение комиссии:</strong>
+            <p style="font-style: italic; margin: 0; color: var(--orange);">{{ event.commission_comment }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Форма для куратора (если пост ожидает проверки) -->
+{% if current_user.role == 'curator' and event.status == 'pending' and event.student.group_name == current_user.group_name %}
+<div class="form-card" style="border-left: 4px solid var(--yellow);">
+    <h3 style="color: var(--yellow); margin: 0 0 1rem 0;">Вынести решение</h3>
+    <form action="/curator/evaluate/{{ event.id }}" method="POST">
+        <div style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: flex-end;">
+            <div class="form-group" style="flex: 1;">
+                <label for="comment-detail" style="display: block; margin-bottom: 0.5rem;">Комментарий:</label>
+                <input type="text" id="comment-detail" name="comment" class="form-control" placeholder="Замечание или отзыв..." style="width: 100%;">
+            </div>
+            <div class="form-group" style="width: 150px;">
+                <label for="score-detail" style="display: block; margin-bottom: 0.5rem;">Балл:</label>
+                <select id="score-detail" name="score" class="form-control" style="width: 100%;">
+                    <option value="5" selected>5 (Отлично)</option>
+                    <option value="4">4 (Хорошо)</option>
+                    <option value="3">3 (Удовл.)</option>
+                    <option value="2">2 (Неуд.)</option>
+                    <option value="1">1 (Грубое нар.)</option>
+                </select>
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" name="action" value="reject" class="btn btn-danger">Отклонить (В арбитраж)</button>
+            <button type="submit" name="action" value="approve" class="btn btn-success">Одобрить</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<!-- Форма для комиссии (если пост спорный) -->
+{% if current_user.role == 'commission' and event.status == 'disputed' %}
+<div class="form-card" style="border-left: 4px solid var(--purple);">
+    <h3 style="color: var(--purple); margin: 0 0 1rem 0;">Арбитраж</h3>
+    <div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--red);">
+        <strong style="color: var(--red);">Причина отклонения куратором:</strong>
+        <p style="font-style: italic; margin: 0.5rem 0 0 0;">{{ event.curator_comment or 'Не указана' }}</p>
+    </div>
+    <form action="/commission/resolve_dispute/{{ event.id }}" method="POST">
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="com_comment-detail" style="display: block; margin-bottom: 0.5rem;">Вердикт комиссии:</label>
+            <input type="text" id="com_comment-detail" name="commission_comment" class="form-control" required placeholder="Аргументы решения..." style="width: 100%;">
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" name="decision" value="confirm_reject" class="btn btn-danger">Оставить отклоненным</button>
+            <button type="submit" name="decision" value="overrule_approve" class="btn btn-success">Одобрить пост</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

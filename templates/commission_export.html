@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Экспорт данных — Комиссия{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="color: var(--orange); margin: 0;">📊 Экспорт в Excel</h1>
+    <a href="{{ url_for('commission_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← На панель</a>
+</div>
+
+<div class="form-card">
+    <h3 style="margin-bottom: 1.5rem; color: var(--blue); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
+        Настройки отчёта
+    </h3>
+
+    <form method="POST">
+        <!-- Выбор групп -->
+        <div style="margin-bottom: 1rem;">
+            <label style="color: var(--fg0); font-weight: bold; display: block; margin-bottom: 0.5rem;">
+                Группы
+            </label>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; background: var(--bg2); color: var(--fg1); cursor: pointer;" onclick="toggleGroups(true)">Выбрать все</button>
+                <button type="button" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; background: var(--bg2); color: var(--fg1); cursor: pointer;" onclick="toggleGroups(false)">Снять все</button>
+            </div>
+            <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                {% for g in groups %}
+                <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.9rem; color: var(--fg1); padding: 0.3rem 0.6rem; background: var(--bg2); border-radius: 4px;">
+                    <input type="checkbox" name="group_ids" value="{{ g.id }}"
+                           style="accent-color: var(--green);" onchange="onGroupChange()">
+                    {{ g.name }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Выбор студентов -->
+        <div style="margin-bottom: 1.5rem;">
+            <label style="color: var(--fg0); font-weight: bold; display: block; margin-bottom: 0.5rem;">
+                Студенты (отфильтруются по группам)
+            </label>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; background: var(--bg2); color: var(--fg1); cursor: pointer;" onclick="toggleStudents(true)">Выбрать всех</button>
+                <button type="button" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; background: var(--bg2); color: var(--fg1); cursor: pointer;" onclick="toggleStudents(false)">Снять всех</button>
+            </div>
+            <div id="student-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.4rem; max-height: 240px; overflow-y: auto; padding: 0.5rem; background: var(--bg1); border-radius: 4px;">
+                {% for s in students %}
+                <label class="student-item" data-group="{{ s.group_id }}" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; color: var(--fg1);">
+                    <input type="checkbox" name="student_ids" value="{{ s.id }}" checked
+                           style="accent-color: var(--green);">
+                    {{ s.last_name or '' }} {{ s.first_name or '' }} ({{ s.group_name or '—' }})
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Фильтры -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin: 0;">
+                <label for="status_filter">Статус мероприятий</label>
+                <select id="status_filter" name="status_filter" class="form-control">
+                    <option value="all">Все статусы</option>
+                    <option value="approved">Только одобренные</option>
+                    <option value="pending">Только на проверке</option>
+                    <option value="disputed">Только в комиссии</option>
+                    <option value="rejected">Только отклонённые</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label for="date_from">Дата с</label>
+                <input type="date" id="date_from" name="date_from" class="form-control">
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label for="date_to">Дата по</label>
+                <input type="date" id="date_to" name="date_to" class="form-control">
+            </div>
+        </div>
+
+        <!-- Включить / исключить -->
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--fg1);">
+                <input type="checkbox" name="include_charts" checked style="accent-color: var(--green);">
+                📈 Включить графики
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--fg1);">
+                <input type="checkbox" name="include_details" checked style="accent-color: var(--green);">
+                📋 Включить детализацию мероприятий
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-success" style="font-size: 1.05rem; padding: 0.6rem 1.5rem;">
+            📥 Скачать Excel-отчёт
+        </button>
+    </form>
+</div>
+
+<div class="form-card" style="margin-top: 1.5rem;">
+    <details>
+        <summary style="color: var(--gray); cursor: pointer; font-size: 0.9rem;">📖 Что будет в файле?</summary>
+        <div style="margin-top: 0.75rem; color: var(--fg1); line-height: 1.7; font-size: 0.9rem;">
+            <p><strong>Лист «Сводка»</strong> — статистика по каждому студенту с подсветкой балла ≥4.5.</p>
+            <p><strong>Лист «Мероприятия»</strong> — детализация мероприятий (если включено).</p>
+            <p><strong>Лист «Графики»</strong> — круговая диаграмма статусов и столбчатая диаграмма среднего балла.</p>
+        </div>
+    </details>
+</div>
+
+<script>
+function toggleGroups(checked) {
+    document.querySelectorAll('input[name="group_ids"]').forEach(function(cb) {
+        cb.checked = checked;
+    });
+    onGroupChange();
+}
+
+function toggleStudents(checked) {
+    document.querySelectorAll('input[name="student_ids"]').forEach(function(cb) {
+        cb.checked = checked;
+    });
+}
+
+function onGroupChange() {
+    var selected = new Set();
+    document.querySelectorAll('input[name="group_ids"]:checked').forEach(function(cb) {
+        selected.add(cb.value);
+    });
+    document.querySelectorAll('.student-item').forEach(function(item) {
+        var gid = item.dataset.group;
+        if (selected.size === 0 || selected.has(gid)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+            item.querySelector('input').checked = false;
+        }
+    });
+}
+</script>
+{% endblock %}

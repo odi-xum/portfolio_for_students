@@ -8,7 +8,7 @@ db = SQLAlchemy()
 class User(db.Model, UserMixin):
     """
     Модель пользователя системы. 
-    Поддерживает 5 ролей: admin, student, teacher, curator, commission.
+    Поддерживает 4 роли: admin, student, curator, commission.
     """
     __tablename__ = 'users'
     
@@ -17,8 +17,14 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), nullable=False)
     
+    # ФИО
+    last_name = db.Column(db.String(50), nullable=True)     # Фамилия
+    first_name = db.Column(db.String(50), nullable=True)    # Имя
+    patronymic = db.Column(db.String(50), nullable=True)    # Отчество
+    
     # Название группы (необходимо для связи студентов и их кураторов, например 'ИСП-41')
     group_name = db.Column(db.String(20), nullable=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
     
     # Обратные связи для удобной выборки через ORM
     events = db.relationship('Event', backref='student', lazy=True, cascade="all, delete-orphan")
@@ -89,8 +95,69 @@ class Notification(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Адресат
     
     message = db.Column(db.Text, nullable=False)
+    link = db.Column(db.String(300), nullable=True)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Department(db.Model):
+    """
+    Модель отделения колледжа.
+    К каждому отделению привязаны только определенные специальности.
+    """
+    __tablename__ = 'departments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)   # "ИТ-отделение"
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    specialties = db.relationship('Specialty', backref='department_rel', lazy=True)
+
+
+class Specialty(db.Model):
+    """
+    Модель специальности колледжа.
+    Каждая специальность имеет уникальное название, код и сокращение из первых букв.
+    Пример: Информационные системы и программирование → ИСП (код 09.02.07)
+    Привязана к определённому отделению.
+    """
+    __tablename__ = 'specialties'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), unique=True, nullable=False)   # "Информационные системы и программирование"
+    code = db.Column(db.String(20), nullable=False)                  # "09.02.07"
+    abbreviation = db.Column(db.String(10), nullable=False)          # "ИСП"
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    groups = db.relationship('Group', backref='specialty_rel', lazy=True)
+
+
+class Group(db.Model):
+    """
+    Модель учебной группы колледжа.
+    Название генерируется автоматически: {сокращение}-{тип}-{год}
+    Пример: ИСП-Б-2022, ПКС-К-2023
+    """
+    __tablename__ = 'groups'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), unique=True, nullable=False)  # ИСП-Б-2022 (авто-генерация)
+    group_number = db.Column(db.String(10), nullable=True)        # 232, 232а (внутренний номер группы)
+    specialty_id = db.Column(db.Integer, db.ForeignKey('specialties.id'), nullable=True)
+    specialty_name = db.Column(db.String(200), nullable=False)     # Информационные системы и программирование
+    specialty_code = db.Column(db.String(20), nullable=False)      # 09.02.07
+    budget_type = db.Column(db.String(10), nullable=True)          # 'бюджет' → Б, 'коммерция' → К
+    start_year = db.Column(db.Integer, nullable=True)              # 2022
+    course = db.Column(db.Integer, nullable=False)                 # 1-4 курс
+    department = db.Column(db.String(100), nullable=True)          # ИТ-отделение
+    form_of_study = db.Column(db.String(50), default='очная')     # очная/заочная
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+    curator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    curator = db.relationship('User', foreign_keys=[curator_id], lazy=True, post_update=True)
 
 
 class ScholarshipRequest(db.Model):

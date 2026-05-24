@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Текущие заявки — ИС Портфолио{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="color: var(--yellow); margin: 0;">📥 Текущие заявки на проверку</h1>
+    <a href="{{ url_for('curator_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← На панель</a>
+</div>
+
+<!-- Поиск -->
+<div class="form-card" style="margin-bottom: 2rem;">
+    <div class="form-group" style="margin: 0;">
+        <label for="search-input" style="font-weight: bold; color: var(--fg1);">🔍 Поиск по заявкам</label>
+        <input type="text" id="search-input" class="form-control" placeholder="Введите название, описание или имя студента..." autocomplete="off">
+        <small style="color: var(--gray); display: block; margin-top: 0.25rem;">Результаты обновляются по мере ввода.</small>
+    </div>
+</div>
+
+<!-- Индикатор загрузки -->
+<div id="loading-indicator" style="display: none; text-align: center; padding: 2rem; color: var(--gray);">
+    <span style="font-size: 1.5rem;">⏳</span> Загрузка...
+</div>
+
+<!-- Сообщение "ничего не найдено" -->
+<div id="no-results" style="display: none; text-align: center; padding: 3rem; background-color: var(--bg1); border-radius: 6px; border: 1px dashed var(--gray);">
+    <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
+    <p style="color: var(--gray); margin: 0;">По вашему запросу ничего не найдено.</p>
+</div>
+
+<!-- Список заявок -->
+<div id="events-container" class="post-grid">
+    {% for event in events %}
+    <div class="post-card" style="padding: 2rem; background-color: var(--bg1); margin-bottom: 1.5rem; border-left: 4px solid var(--yellow); border-radius: 4px;">
+        <div class="post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div>
+                <h3 style="color: var(--fg0); margin: 0 0 0.5rem 0;">{{ event.title }}</h3>
+                <small style="color: var(--gray);">
+                    Автор: <strong>{{ event.student.username if event.student else 'Удаленный пользователь' }}</strong> | ID поста: {{ event.id }} | Дата: {{ event.created_at.strftime('%d.%m.%Y %H:%M') }}
+                </small>
+            </div>
+            <span class="status-badge" style="background-color: var(--yellow); color: var(--bg0); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">На проверке</span>
+        </div>
+
+        <div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
+            <strong style="color: var(--blue); display: block; margin-bottom: 0.25rem;">Описание:</strong>
+            <p style="white-space: pre-wrap; margin: 0;">{{ event.description or 'Описание отсутствует.' }}</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
+            <strong style="color: var(--fg1); display: block; margin-bottom: 0.25rem;">Прикрепленные документы:</strong>
+            <ul style="list-style: none; padding-left: 0; margin: 0;">
+                {% for file in event.files %}
+                <li style="margin-bottom: 0.35rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                    {% if file.file_type in ['png', 'jpg', 'jpeg'] %}
+                    <a href="#" onclick="openLightbox('/diplom/{{ file.file_path.split('diplom/')[-1] }}'); return false;" style="display: inline-block;">
+                        <img src="/diplom/{{ file.file_path.split('diplom/')[-1] }}" style="height: 60px; width: auto; border-radius: 4px; cursor: pointer; border: 1px solid var(--gray);" title="Нажмите для предпросмотра">
+                    </a>
+                    {% else %}
+                    <span style="color: var(--gray);">[PDF]</span>
+                    <a href="/diplom/{{ file.file_path.split('diplom/')[-1] }}" target="_blank" style="color: var(--blue); text-decoration: underline;">Скачать PDF</a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <form action="/curator/evaluate/{{ event.id }}" method="POST" style="border-top: 1px solid var(--bg2); padding-top: 1rem;">
+            <div style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: flex-end;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="comment-{{ event.id }}" style="display: block; margin-bottom: 0.5rem;">Замечание или отзыв (обязателен при отклонении):</label>
+                    <input type="text" id="comment-{{ event.id }}" name="comment" class="form-control" placeholder="Например: Грамота подтверждена или Ссылка не открывается" style="width: 100%; box-sizing: border-box;">
+                </div>
+                <div class="form-group" style="width: 150px;">
+                    <label for="score-{{ event.id }}" style="display: block; margin-bottom: 0.5rem;">Балл (1-5):</label>
+                    <select id="score-{{ event.id }}" name="score" class="form-control" style="width: 100%;">
+                        <option value="5" selected>5 (Отлично)</option>
+                        <option value="4">4 (Хорошо)</option>
+                        <option value="3">3 (Удовл.)</option>
+                        <option value="2">2 (Неуд.)</option>
+                        <option value="1">1 (Грубое нар.)</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" name="action" value="reject" class="btn btn-danger">Отклонить (В арбитраж)</button>
+                <button type="submit" name="action" value="approve" class="btn btn-success">Одобрить и начислить балл</button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; background-color: var(--bg1); border-radius: 6px; border: 1px dashed var(--gray);">
+        <p style="color: var(--gray); margin: 0;">Новых публикаций от студентов вашей группы нет.</p>
+        <a href="{{ url_for('curator_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none; margin-top: 1rem; display: inline-block;">← На панель</a>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+(function() {
+    var searchInput = document.getElementById('search-input');
+    var container = document.getElementById('events-container');
+    var noResults = document.getElementById('no-results');
+    var loadingEl = document.getElementById('loading-indicator');
+    var debounceTimer = null;
+
+    function renderEvents(events) {
+        if (events.length === 0) {
+            container.style.display = 'none';
+            noResults.style.display = 'block';
+            return;
+        }
+        container.style.display = '';
+        noResults.style.display = 'none';
+
+        container.innerHTML = events.map(function(e) {
+            var desc = e.description || 'Описание отсутствует.';
+            var studentInfo = '<small style="color: var(--gray);">Автор: <strong>' + e.student + '</strong> | ID поста: ' + e.id + ' | Дата: ' + e.created_at + '</small>';
+            return '<div class="post-card" style="padding: 2rem; background-color: var(--bg1); margin-bottom: 1.5rem; border-left: 4px solid var(--yellow); border-radius: 4px;">' +
+                '<div class="post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">' +
+                '<div><h3 style="color: var(--fg0); margin: 0 0 0.5rem 0;">' + e.title + '</h3>' + studentInfo + '</div>' +
+                '<span class="status-badge" style="background-color: var(--yellow); color: var(--bg0); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">На проверке</span>' +
+                '</div>' +
+                '<div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">' +
+                '<strong style="color: var(--blue); display: block; margin-bottom: 0.25rem;">Описание:</strong>' +
+                '<p style="white-space: pre-wrap; margin: 0;">' + desc + '</p></div>' +
+                '</div>';
+        }).join('');
+    }
+
+    function doSearch(query) {
+        loadingEl.style.display = '';
+        fetch('/curator/api/events?scope=pending&q=' + encodeURIComponent(query))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                loadingEl.style.display = 'none';
+                renderEvents(data.events);
+            })
+            .catch(function() {
+                loadingEl.style.display = 'none';
+            });
+    }
+
+    searchInput.addEventListener('input', function() {
+        var query = searchInput.value.trim();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (query === '') {
+            window.location.reload();
+            return;
+        }
+        debounceTimer = setTimeout(function() { doSearch(query); }, 250);
+    });
+})();
+</script>
+{% endblock %}

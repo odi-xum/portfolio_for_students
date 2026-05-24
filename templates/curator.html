@@ -3,128 +3,70 @@
 {% block title %}Панель куратора — ИС Портфолио{% endblock %}
 
 {% block content %}
-<h1 style="color: var(--aqua); margin-bottom: 2rem;">Панель куратора группы: {{ current_user.group_name or 'Не назначена' }}</h1>
-
-<!-- ========================================== -->
-<!-- БЛОК АКТУАЛЬНЫХ ЗАЯВОК НА ПРОВЕРКУ          -->
-<!-- ========================================== -->
-<h2 style="margin-bottom: 1.5rem; color: var(--fg1); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-    Новые публикации студентов, ожидающие верификации
-</h2>
-
-<div class="post-grid" style="margin-bottom: 4rem;">
-    {% for event in events %}
-    <div class="post-card" style="padding: 2rem; background-color: var(--bg1); margin-bottom: 1.5rem; border-left: 4px solid var(--yellow); border-radius: 4px;">
-        <div class="post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div>
-                <h3 style="color: var(--fg0); margin: 0 0 0.5rem 0;">{{ event.title }}</h3>
-                <small style="color: var(--gray);">
-                    Автор: <strong>{{ event.student.username if event.student else 'Удаленный пользователь' }}</strong> | ID поста: {{ event.id }} | Дата: {{ event.created_at.strftime('%d.%m.%Y %H:%M') }}
-                </small>
-            </div>
-            <span class="status-badge" style="background-color: var(--yellow); color: var(--bg0); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">На проверке</span>
+<!-- Приветственная карточка -->
+<div class="form-card" style="margin-bottom: 2.5rem;">
+    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+        <div style="font-size: 3rem; line-height: 1;">📋</div>
+        <div>
+            <h2 style="color: var(--fg0); margin: 0 0 0.5rem 0;">Добро пожаловать, {{ current_user.username }}</h2>
+            <p style="color: var(--fg1); margin: 0;">
+                Панель управления группой. Проверяйте публикации студентов, выставляйте оценки
+                и направляйте спорные случаи в аттестационную комиссию.
+            </p>
         </div>
-
-        <div style="margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
-            <strong style="color: var(--blue); display: block; margin-bottom: 0.25rem;">Описание достижения/мероприятия:</strong>
-            <p style="white-space: pre-wrap; margin: 0;">{{ event.description or 'Описание отсутствует.' }}</p>
-        </div>
-
-        <div style="margin-bottom: 1.5rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
-            <strong style="color: var(--fg1); display: block; margin-bottom: 0.25rem;">Прикрепленные документы (доказательства):</strong>
-            <ul style="list-style: none; padding-left: 0; margin: 0;">
-                {% for file in event.files %}
-                <li style="margin-bottom: 0.25rem;">
-                    <span style="color: var(--gray);">[{{ file.file_type.upper() }}]</span>
-                    <a href="/diplom/{{ file.file_path.split('diplom/')[-1] }}" target="_blank" style="color: var(--blue); text-decoration: underline;">
-                        Посмотреть документ
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <!-- Форма оценки куратором -->
-        <form action="/curator/evaluate/{{ event.id }}" method="POST" style="border-top: 1px solid var(--bg2); padding-top: 1rem;">
-            <div style="display: flex; gap: 2rem; margin-bottom: 1rem; align-items: flex-end;">
-                <div class="form-group" style="flex: 1;">
-                    <label for="comment-{{ event.id }}" style="display: block; margin-bottom: 0.5rem;">Замечание или отзыв куратора (обязателен при отклонении):</label>
-                    <input type="text" id="comment-{{ event.id }}" name="comment" class="form-control" placeholder="Например: Грамота подтверждена или Ссылка не открывается" style="width: 100%; box-sizing: border-box;">
-                </div>
-                <div class="form-group" style="width: 150px;">
-                    <label for="score-{{ event.id }}" style="display: block; margin-bottom: 0.5rem;">Балл (1-5):</label>
-                    <select id="score-{{ event.id }}" name="score" class="form-control" style="width: 100%;">
-                        <option value="5" selected>5 (Отлично)</option>
-                        <option value="4">4 (Хорошо)</option>
-                        <option value="3">3 (Удовл.)</option>
-                        <option value="2">2 (Неуд.)</option>
-                        <option value="1">1 (Грубое нар.)</option>
-                    </select>
-                </div>
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                <button type="submit" name="action" value="reject" class="btn btn-danger">Отклонить (В арбитраж)</button>
-                <button type="submit" name="action" value="approve" class="btn btn-success">Одобрить и начислить балл</button>
-            </div>
-        </form>
     </div>
-    {% else %}
-        <p style="color: var(--gray); font-style: italic; margin-bottom: 2rem;">Новых публикаций от студентов вашей группы нет.</p>
-    {% endfor %}
 </div>
 
-<!-- ========================================== -->
-<!-- БЛОК ИСТОРИИ И АРХИВА ДЕЙСТВИЙ КУРАТОРА     -->
-<!-- ========================================== -->
-<hr style="border: 0; border-top: 2px dashed var(--bg2); margin-bottom: 3rem;">
-<h2 style="margin-bottom: 1.5rem; color: var(--purple); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-    Журнал вынесенных решений куратора (Архив группы)
-</h2>
+<!-- Быстрая статистика -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">⏳</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">На проверке</div>
+        <div style="color: var(--yellow); font-size: 1.75rem; font-weight: bold;">{{ pending_count }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">✅</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Одобрено</div>
+        <div style="color: var(--green); font-size: 1.75rem; font-weight: bold;">{{ approved_count }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">⚖️</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">В комиссии</div>
+        <div style="color: var(--orange); font-size: 1.75rem; font-weight: bold;">{{ disputed_count }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">📚</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Всего решено</div>
+        <div style="color: var(--purple); font-size: 1.75rem; font-weight: bold;">{{ total_resolved }}</div>
+    </div>
+</div>
 
-<div class="table-responsive">
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Студент</th>
-                <th>Название публикации</th>
-                <th>Выставленный балл</th>
-                <th>Текущий статус поста</th>
-                <th>Ваш комментарий</th>
-                <th>Вердикт комиссии (при арбитраже)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for event in resolved_events %}
-            <tr>
-                <td>{{ event.id }}</td>
-                <td style="font-weight: bold; color: var(--fg0);">{{ event.student.username if event.student else 'Удален' }}</td>
-                <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ event.title }}</td>
-                <td style="text-align: center; font-weight: bold; color: var(--aqua);">{{ event.score if event.score else '—' }}</td>
-                <td>
-                    {% if event.status == 'approved' %}
-                        <span style="color: var(--green); font-weight: bold;">✔ Одобрен</span>
-                    {% elif event.status == 'disputed' %}
-                        <span style="color: var(--yellow); font-style: italic;">⏳ В комиссии (Спор)</span>
-                    {% elif event.status == 'rejected' %}
-                        <span style="color: var(--red);">❌ Отклонен комиссией</span>
-                    {% else %}
-                        <span style="color: var(--gray);">{{ event.status }}</span>
-                    {% endif %}
-                </td>
-                <td style="font-style: italic; color: var(--gray); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    {{ event.curator_comment or '—' }}
-                </td>
-                <td style="font-style: italic; color: var(--purple); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    {{ event.commission_comment or '—' }}
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="7" style="text-align: center; color: var(--gray);">Вы еще не обработали ни одной публикации студентов.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- Быстрые действия -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+
+    <a href="{{ url_for('curator_pending') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">📥</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Текущие заявки</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Проверка новых публикаций студентов с поиском</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('curator_resolved') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">📋</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Журнал решений</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">История вынесенных оценок и решений с поиском</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('curator_export') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">📊</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Экспорт в Excel</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Сводка, детализация и графики по студентам группы</p>
+        </div>
+    </a>
+
 </div>
 {% endblock %}

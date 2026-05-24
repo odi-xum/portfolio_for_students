@@ -1,149 +1,84 @@
 {% extends 'base.html' %}
 
-{% block title %}Моя стена портфолио — ИС Портфолио{% endblock %}
+{% block title %}Моя панель — ИС Портфолио{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <h1 style="color: var(--orange); margin: 0;">Моя стена портфолио</h1>
-    
-    <!-- Форма запроса повышенной стипендии -->
-    <form action="{{ url_for('request_scholarship') }}" method="POST" style="margin: 0;">
-        <button type="submit" class="btn btn-warning" style="box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-            Подать на повышенную стипендию
-        </button>
-    </form>
-</div>
-
-<!-- Контейнер для динамического вывода ошибок валидации на клиенте (JS) -->
-<div id="js-alert-container"></div>
-
-<!-- Форма добавления нового мероприятия (Пост на стену) -->
-<div class="form-card" style="background-color: var(--bg1); border: 1px solid var(--bg2); padding: 2rem; margin-bottom: 2.5rem;">
-    <h3 style="margin-bottom: 1.5rem; color: var(--blue); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-        Опубликовать новое мероприятие
-    </h3>
-    
-    <form id="event-form" method="POST" action="{{ url_for('student_dashboard') }}" enctype="multipart/form-data">
-        
-        <div class="form-group">
-            <label for="title" style="font-weight: bold; color: var(--fg1);">Название мероприятия *</label>
-            <input type="text" id="title" name="title" class="form-control" required 
-                   placeholder="Например: Участие в хакатоне 'Программисты Сибири'">
+<!-- Приветственная карточка -->
+<div class="form-card" style="margin-bottom: 2.5rem;">
+    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+        <div style="font-size: 3rem; line-height: 1;">🎓</div>
+        <div>
+            <h2 style="color: var(--fg0); margin: 0 0 0.5rem 0;">Добро пожаловать, {{ current_user.username }}</h2>
+            <p style="color: var(--fg1); margin: 0;">
+                Добро пожаловать в систему портфолио! Здесь вы можете публиковать свои достижения,
+                отслеживать их статус проверки и подавать заявки на повышенную стипендию.
+            </p>
         </div>
-        
-        <div class="form-group">
-            <label for="description" style="font-weight: bold; color: var(--fg1);">Комментарий / Описание (опционально)</label>
-            <textarea id="description" name="description" class="form-control" rows="4" 
-                      placeholder="Опишите вашу роль в мероприятии или добавьте заметки..."></textarea>
-        </div>
-        
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-            <label for="files" style="font-weight: bold; color: var(--fg1);">Документы-доказательства (PNG, JPG, PDF) *</label>
-            <input type="file" id="files" name="files" class="form-control" multiple accept=".png, .jpg, .jpeg, .pdf" style="padding: 0.5rem;">
-            <small style="color: var(--gray); display: block; margin-top: 0.25rem;">
-                Фронтенд-контроль: без прикрепленного файла (сертификата, грамоты, фото) пост не будет опубликован.
-            </small>
-        </div>
-        
-        <button type="submit" class="btn btn-success" style="padding: 0.75rem 2rem;">Опубликовать пост</button>
-    </form>
-</div>
-
-<!-- Лента публикаций (Стена студента) -->
-<h2 style="margin-bottom: 1.5rem; color: var(--fg1); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-    История моих публикаций
-</h2>
-
-<div class="post-grid">
-    {% for event in events %}
-    <!-- Применение динамических классов стилей на основе статуса записи из БД -->
-    <div class="post-card {{ event.status }}" style="background-color: var(--bg1); padding: 1.5rem; margin-bottom: 1rem; border-radius: 0 6px 6px 0;">
-        
-        <div class="post-header">
-            <h3 style="color: var(--fg0);">{{ event.title }}</h3>
-            <span class="status-badge badge-{{ event.status }}">
-                {% if event.status == 'pending' %}На проверке
-                {% elif event.status == 'approved' %}Одобрено
-                {% elif event.status == 'rejected' %}Отклонено куратором
-                {% elif event.status == 'disputed' %}В комиссии
-                {% else %}{{ event.status }}{% endif %}
-            </span>
-        </div>
-        
-        <p style="color: var(--fg1); white-space: pre-wrap; margin-bottom: 1rem; background-color: var(--bg2); padding: 0.75rem; border-radius: 4px;">
-            {{ event.description or 'Описание к данному мероприятию не было добавлено.' }}
-        </p>
-        
-        <!-- Вывод прикрепленных файлов (Исправлено) -->
-        <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background-color: var(--bg2); border-radius: 4px;">
-            <span style="font-size: 0.9rem; color: var(--gray); display: block; margin-bottom: 0.25rem;">Прикрепленные доказательства:</span>
-            <ul style="list-style: none; padding-left: 0; margin: 0;">
-                {% for file in event.files %}
-                <li style="font-size: 0.9rem; margin-bottom: 0.25rem;">
-                    <span style="color: var(--gray);">[{{ file.file_type.upper() }}]</span>
-                    <a href="/diplom/{{ file.file_path.split('diplom/')[-1] }}" target="_blank" style="color: var(--blue); text-decoration: underline;">
-                        Посмотреть документ
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <!-- Обратная связь от проверяющих ролей -->
-        {% if event.score or event.curator_comment or event.commission_comment %}
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--bg2); font-size: 0.95rem;">
-            {% if event.score %}
-                <p style="color: var(--green); margin-bottom: 0.25rem;">
-                    <strong>Выставленная оценка:</strong> {{ event.score }} / 5
-                </p>
-            {% endif %}
-            
-            {% if event.curator_comment %}
-                <p style="color: var(--fg1); margin-bottom: 0.25rem; font-style: italic;">
-                    <strong>Комментарий куратора:</strong> {{ event.curator_comment }}
-                </p>
-            {% endif %}
-            
-            {% if event.commission_comment %}
-                <p style="color: var(--orange); margin-bottom: 0.25rem; font-style: italic;">
-                    <strong>Решение комиссии:</strong> {{ event.commission_comment }}
-                </p>
-            {% endif %}
-        </div>
-        {% endif %}
-        
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 3rem; background-color: var(--bg1); border-radius: 6px; border: 1px dashed var(--gray);">
-        <p style="color: var(--gray);">Ваша стена портфолио пока пуста. Добавьте первое мероприятие выше.</p>
-    </div>
-    {% endfor %}
 </div>
 
-<!-- Скрипт жесткой фронтенд-валидации файлов на стороне клиента -->
-<script>
-document.getElementById('event-form').addEventListener('submit', function(e) {
-    const fileInput = document.getElementById('files');
-    const alertContainer = document.getElementById('js-alert-container');
-    
-    // Сброс предыдущих ошибок
-    alertContainer.innerHTML = '';
+<!-- Быстрая статистика -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">📊</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Всего постов</div>
+        <div style="color: var(--fg0); font-size: 1.75rem; font-weight: bold;">{{ total }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">✅</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Одобрено</div>
+        <div style="color: var(--green); font-size: 1.75rem; font-weight: bold;">{{ approved }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">⏳</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">На проверке</div>
+        <div style="color: var(--yellow); font-size: 1.75rem; font-weight: bold;">{{ pending }}</div>
+    </div>
+    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
+        <div style="font-size: 2rem; line-height: 1;">⚖️</div>
+        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">В комиссии</div>
+        <div style="color: var(--orange); font-size: 1.75rem; font-weight: bold;">{{ disputed }}</div>
+    </div>
+</div>
 
-    // Проверка: выбран ли хотя бы один файл
-    if (fileInput.files.length === 0) {
-        e.preventDefault(); // Полная блокировка отправки формы на бэкенд
-        
-        // Генерация алерта в стиле Gruvbox Material
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert alert-danger';
-        alertDiv.style.marginBottom = '1.5rem';
-        alertDiv.innerText = 'Внимание: Не хватает доказательств для присутствия на мероприятии. Загрузка файлов (PNG, JPG или PDF) обязательна.';
-        
-        alertContainer.appendChild(alertDiv);
-        
-        // Плавный скролл наверх к сообщению об ошибке
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-});
-</script>
+<!-- Быстрые действия -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+
+    <a href="{{ url_for('student_create') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">📝</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Создать мероприятие</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Опубликовать новое достижение с подтверждающими документами</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('student_history') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
+        <div style="font-size: 2.5rem; line-height: 1;">📋</div>
+        <div>
+            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">История публикаций</h3>
+            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Просмотр всех постов с поиском и фильтрацией</p>
+        </div>
+    </a>
+
+</div>
+
+<!-- Запрос стипендии (только если доступно) -->
+{% if can_request %}
+<div class="form-card" style="border-left: 4px solid var(--yellow); margin-bottom: 2rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <strong style="color: var(--fg0); font-size: 1.05rem;">Выполнены нормативы портфолио!</strong>
+            <p style="color: var(--fg1); margin: 0.25rem 0 0 0; font-size: 0.9rem;">
+                {{ approved }} одобренных постов, средний балл достаточен. Вы можете подать заявку на повышенную стипендию.
+            </p>
+        </div>
+        <form action="{{ url_for('request_scholarship') }}" method="POST" style="margin: 0;">
+            <button type="submit" class="btn btn-warning" style="box-shadow: 0 4px 6px rgba(0,0,0,0.2); white-space: nowrap;">
+                Подать на повышенную стипендию
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
