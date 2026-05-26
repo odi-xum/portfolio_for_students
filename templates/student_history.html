@@ -101,7 +101,8 @@
         {% endif %}
 
         <div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--gray);">
-            {{ event.created_at.strftime('%d.%m.%Y %H:%M') if event.created_at else '' }}
+            Категория: <strong>{{ event.category_label }}</strong>
+            · {{ event.created_at.strftime('%d.%m.%Y %H:%M') if event.created_at else '' }}
         </div>
 
     </div>
@@ -186,7 +187,8 @@
                 '<ul style="list-style: none; padding-left: 0; margin: 0;">' + filesHtml + '</ul>' +
                 '</div>' +
                 feedbackHtml +
-                '<div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--gray);">' + e.created_at + '</div>' +
+                '<div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--gray);">' +
+                'Категория: <strong>' + (e.category || 'Без категории') + '</strong> · ' + e.created_at + '</div>' +
                 '</div>';
         }).join('');
     }

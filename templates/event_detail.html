@@ -32,6 +32,10 @@
             <strong style="color: var(--fg0);">{{ event.id }}</strong>
         </div>
         <div>
+            <span style="color: var(--gray);">Категория:</span>
+            <strong style="color: var(--fg0);">{{ event.category_label }}</strong>
+        </div>
+        <div>
             <span style="color: var(--gray);">Дата создания:</span>
             <strong style="color: var(--fg0);">{{ event.created_at.strftime('%d.%m.%Y %H:%M') if event.created_at else '—' }}</strong>
         </div>
@@ -98,7 +102,7 @@
 </div>
 
 <!-- Форма для куратора (если пост ожидает проверки) -->
-{% if current_user.role == 'curator' and event.status == 'pending' and event.student.group_name == current_user.group_name %}
+{% if current_user.role == 'curator' and event.status == 'pending' and event.student.group_id in current_user.curated_groups | map(attribute='id') | list %}
 <div class="form-card" style="border-left: 4px solid var(--yellow);">
     <h3 style="color: var(--yellow); margin: 0 0 1rem 0;">Вынести решение</h3>
     <form action="/curator/evaluate/{{ event.id }}" method="POST">

@@ -21,16 +21,21 @@ python app.py
 The application runs in debug mode on http://localhost:5000 by default.
 
 ### Database Initialization
-The database is initialized automatically when running `app.py`:
-- Creates tables if they don't exist
-- Populates with test data if no admin user exists:
-  - admin/admin (password: 111)
-  - teacher/teacher (password: 111)
-  - student/student (password: 111, group: ИСП-41)
-  - curator/curator (password: 111, group: ИСП-41)
-  - commission/commission (password: 111)
-  - ivanov/ivanov (password: 111, student, group: ИСП-41)
-- Creates sample events, notifications, and scholarship requests for testing
+Database is loaded from `sql/seed.sql`:
+- Run `python sql/load.py` to populate the database
+- Creates tables automatically on first `app.py` run
+- Test users (all passwords: `111`):
+
+| Login | Role | Group |
+|-------|------|-------|
+| `admin` | admin | — |
+| `commission` | commission | — |
+| `cur1` | curator | ИСП-Б-2022 |
+| `student1` | student | ИСП-Б-2022 |
+| `student2` | student | ИСП-Б-2022 |
+| `student3` | student | ИСП-Б-2022 |
+- 50 students total across 7 curators and 8 groups
+- Pre-loaded sample events, notifications, and scholarship requests
 
 ### Working with Uploads
 - Uploaded files are stored in `./diplom/students/{username}/{event_id}_{title}/`
@@ -141,9 +146,9 @@ Every route checks `current_user.role` to enforce permissions:
 ## Important Gotchas & Non-Obvious Patterns
 
 ### Database Initialization
-- The `init_test_db()` function runs on every application startup
-- It only creates sample data if no admin user exists (checks `User.query.filter_by(username='admin').first()`)
-- All test users share the same password hash: `generate_password_hash('111')`
+- Data is loaded from `sql/seed.sql` (run `python sql/load.py`)
+- `app.py` creates tables on first run via `db.create_all()`
+- All test users share the same password: `111`
 - The upload folder path is set to absolute path: `os.path.abspath('./diplom')`
 
 ### File Handling
@@ -181,7 +186,7 @@ Every route checks `current_user.role` to enforce permissions:
 - No automated test suite visible in repository
 
 ### Test Data Characteristics
-- 20 approved events with score=5 created for 'student' user to satisfy scholarship requirements
+- 20 approved events with score=5 created for 'student1' user to satisfy scholarship requirements
 - Additional test data for each workflow stage:
   - 5 pending events (curator review)
   - 5 disputed events (commission arbitration)

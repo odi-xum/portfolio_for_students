@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.full_name }} — ОК — ИС Портфолио{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('curator_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none; margin-bottom: 0.5rem; display: inline-block;">← На панель</a>
+        <h1 style="color: var(--fg0); margin: 0.5rem 0 0 0;">{{ student.full_name }}</h1>
+        <p style="color: var(--gray); margin: 0.25rem 0 0 0;">Группа: {{ student.group_name or '—' }}</p>
+    </div>
+</div>
+
+<!-- OK Progress -->
+<div class="form-card" style="margin-bottom: 2rem;">
+    <h3 class="section-heading">📋 Общие компетенции (ОК)</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;">
+
+        {% for ok in ok_stats %}
+        <div style="padding: 1rem; text-align: center; border-radius: 6px;
+                    background: var(--bg1); border: 2px solid var(--bg3);
+                    {% if ok.done %}border-color: var(--green);{% endif %}">
+            <div style="font-size: 1.8rem; line-height: 1; margin-bottom: 0.25rem;">
+                {% if ok.done %}✅{% elif ok.approved > 0 %}⏳{% else %}⬜{% endif %}
+            </div>
+            <div style="font-weight: bold; font-size: 1rem; color: var(--fg0);">{{ ok.ok }}</div>
+            <div style="font-size: 0.85rem; color: var(--gray); margin-top: 0.25rem;">
+                {{ ok.approved }}/3 одобрено
+            </div>
+            {% if ok.pending > 0 %}
+            <div style="font-size: 0.8rem; color: var(--yellow);">⏳ {{ ok.pending }} на проверке</div>
+            {% endif %}
+            {% if ok.has_override %}
+            <div style="font-size: 0.8rem; color: var(--green);">✓ засчитано куратором</div>
+            {% endif %}
+            <form action="{{ url_for('curator_toggle_ok', student_id=student.id, ok_category=ok.ok) }}" method="POST" style="margin-top: 0.5rem;">
+                <button type="submit" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;
+                    {% if ok.has_override %}background: var(--red); color: #fff;{% else %}background: var(--bg2); color: var(--fg1);{% endif %}">
+                    {% if ok.has_override %}Отменить зачёт{% else %}Засчитать{% endif %}
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+<!-- Filter tabs -->
+<div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+    <a href="{{ url_for('curator_student_ok', student_id=student.id) }}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;
+       {% if not current_category %}background: var(--blue); color: #fff;{% else %}background: var(--bg2); color: var(--fg1);{% endif %}">Все</a>
+    {% for ok in ok_list %}
+    <a href="{{ url_for('curator_student_ok', student_id=student.id) }}?category={{ ok }}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;
+       {% if current_category == ok %}background: var(--blue); color: #fff;{% else %}background: var(--bg2); color: var(--fg1);{% endif %}">{{ ok }}</a>
+    {% endfor %}
+    <a href="{{ url_for('curator_student_ok', student_id=student.id) }}?category=none" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;
+       {% if current_category == 'none' %}background: var(--blue); color: #fff;{% else %}background: var(--bg2); color: var(--fg1);{% endif %}">Без категории</a>
+</div>
+
+<!-- Events -->
+{% if events %}
+<div style="display: flex; flex-direction: column; gap: 1rem;">
+    {% for e in events %}
+    <div class="post-card {{ e.status }}">
+        <div class="post-header">
+            <h3 style="color: var(--fg0); margin: 0;">
+                <a href="{{ url_for('event_detail', event_id=e.id) }}" style="color: var(--fg0); text-decoration: none;">{{ e.title }}</a>
+            </h3>
+            <span class="status-badge badge-{{ e.status }}">{{ e.status_label }}</span>
+        </div>
+        <div style="color: var(--fg1); font-size: 0.9rem; margin-bottom: 0.5rem;">
+            {{ e.description or '' }}
+        </div>
+        <div style="color: var(--gray); font-size: 0.85rem;">
+            Категория: <strong>{{ e.category_label }}</strong>
+            {% if e.score %} · Оценка: {{ e.score }}{% endif %}
+            · {{ e.created_at.strftime('%d.%m.%Y') if e.created_at else '' }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="form-card" style="text-align: center; padding: 2rem;">
+    <p style="color: var(--gray);">Нет мероприятий{% if current_category %} по категории {{ current_category }}{% endif %}.</p>
+</div>
+{% endif %}
+{% endblock %}

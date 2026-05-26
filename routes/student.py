@@ -1,47 +1,58 @@
 """
-Маршруты студента: панель, создание поста, история, запрос стипендии.
+Маршруты студента: панель, создание поста, история, запрос стипендии, ОК.
 """
 import os
 
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
 
-from models import db, User, Event, EventFile, Notification, ScholarshipRequest
+from constants import EventStatus
+from models import db, Event, EventFile, ScholarshipRequest
 from helpers import allowed_file, now_utc, BASE_UPLOAD_FOLDER
+from pdf_export import generate_portfolio_pdf
+from services.student_service import get_student_event_stats, check_scholarship_eligibility
+from services.notification_service import notify_curators_of_group
+from helpers import log_audit
+from services.ok_service import get_ok_stats, all_ok_completed
 
 
 def register_student_routes(app):
 
+    def _abort_if_not_student():
+        if current_user.role != 'student':
+            return "Доступ ограничен", 403
+
     @app.route('/student/dashboard', methods=['GET'])
     @login_required
     def student_dashboard():
-        if current_user.role != 'student':
-            return "Доступ ограничен", 403
-        total = Event.query.filter_by(student_id=current_user.id).count()
-        approved = Event.query.filter_by(student_id=current_user.id, status='approved').count()
-        pending = Event.query.filter_by(student_id=current_user.id, status='pending').count()
-        disputed = Event.query.filter_by(student_id=current_user.id, status='disputed').count()
+        r = _abort_if_not_student()
+        if r: return r
 
-        can_request = False
-        if approved >= 20:
-            approved_events = Event.query.filter_by(student_id=current_user.id, status='approved').all()
-            avg_score = sum(e.score for e in approved_events) / len(approved_events)
-            can_request = avg_score >= 4.5
+        stats = get_student_event_stats(current_user.id)
+        eligible, _, _ = check_scholarship_eligibility(current_user.id)
+        ok_stats = get_ok_stats(current_user.id)
+        ok_all_done = all_ok_completed(current_user.id)
 
-        return render_template('student.html', total=total, approved=approved,
-                               pending=pending, disputed=disputed, can_request=can_request)
+        return render_template('student.html', total=stats['total'],
+                               approved=stats['approved'],
+                               pending=stats['pending'],
+                               disputed=stats['disputed'],
+                               can_request=eligible,
+                               ok_stats=ok_stats,
+                               ok_all_done=ok_all_done)
 
     @app.route('/student/create', methods=['GET', 'POST'])
     @login_required
     def student_create():
-        if current_user.role != 'student':
-            return "Доступ ограничен", 403
+        r = _abort_if_not_student()
+        if r: return r
 
         if request.method == 'POST':
             title = request.form.get('title')
             description = request.form.get('description')
+            category = request.form.get('category') or None
             files = request.files.getlist('files')
             valid_files = [f for f in files if f and allowed_file(f.filename)]
 
@@ -56,11 +67,12 @@ def register_student_routes(app):
                 student_id=current_user.id,
                 title=title,
                 description=description,
-                status='pending',
+                category=category,
+                status=EventStatus.PENDING,
                 created_at=now_utc()
             )
             db.session.add(new_event)
-            db.session.commit()
+            db.session.flush()
 
             safe_username = secure_filename(current_user.username)
             safe_title = secure_filename(title)
@@ -75,14 +87,14 @@ def register_student_routes(app):
                 ext = filename.rsplit('.', 1)[1].lower()
                 db.session.add(EventFile(event_id=new_event.id, file_path=file_path, file_type=ext))
 
-            curator = User.query.filter_by(role='curator', group_name=current_user.group_name).first()
-            if curator:
-                db.session.add(Notification(
-                    user_id=curator.id,
-                    message=f"Студент {current_user.username} опубликовал новое мероприятие: '{title}'. Требуется проверка."
-                ))
+            if current_user.group_id:
+                notify_curators_of_group(
+                    current_user.group_id,
+                    f"Студент {current_user.username} опубликовал новое мероприятие: '{title}'. Требуется проверка.",
+                    url_for('event_detail', event_id=new_event.id))
 
             db.session.commit()
+            log_audit(current_user, 'event_create', f'Создано мероприятие #{new_event.id} «{title}»')
             flash('Мероприятие успешно опубликовано на вашей стене и отправлено куратору.', 'success')
             return redirect(url_for('student_history'))
 
@@ -91,40 +103,66 @@ def register_student_routes(app):
     @app.route('/student/history', methods=['GET'])
     @login_required
     def student_history():
-        if current_user.role != 'student':
-            return "Доступ ограничен", 403
+        r = _abort_if_not_student()
+        if r: return r
+
         events = Event.query.options(joinedload(Event.files)).filter_by(
             student_id=current_user.id
         ).order_by(Event.created_at.desc()).all()
         return render_template('student_history.html', events=events)
 
+    @app.route('/student/notify_ok', methods=['POST'])
+    @login_required
+    def student_notify_ok():
+        r = _abort_if_not_student()
+        if r: return r
+
+        if all_ok_completed(current_user.id):
+            if current_user.group_id:
+                notify_curators_of_group(
+                    current_user.group_id,
+                    f"Студент {current_user.full_name} выполнил все общие компетенции (ОК-1 — ОК-9). Требуется подтверждение.")
+            flash('Уведомление отправлено куратору.', 'success')
+        else:
+            flash('Не все общие компетенции выполнены.', 'warning')
+        return redirect(url_for('student_dashboard'))
+
     @app.route('/student/request_scholarship', methods=['POST'])
     @login_required
     def request_scholarship():
-        if current_user.role != 'student':
-            return "Доступ ограничен", 403
+        r = _abort_if_not_student()
+        if r: return r
 
-        approved_events = Event.query.filter_by(student_id=current_user.id, status='approved').all()
-
-        if len(approved_events) < 20:
-            flash(f'Отказано: Недостаточно верифицированных достижений. У вас {len(approved_events)} из 20 необходимых.', 'danger')
+        eligible, count, avg = check_scholarship_eligibility(current_user.id)
+        if count < 20:
+            flash(f'Отказано: Недостаточно верифицированных достижений. У вас {count} из 20 необходимых.', 'danger')
             return redirect(url_for('student_dashboard'))
-
-        avg_score = sum([e.score for e in approved_events]) / len(approved_events)
-        if avg_score < 4.5:
-            flash(f'Отказано: Недостаточный средний балл портфолио. Ваш показатель: {avg_score:.2f} (требуется не менее 4.50).', 'danger')
+        if not eligible:
+            flash(f'Отказано: Недостаточный средний балл портфолио. Ваш показатель: {avg:.2f} (требуется не менее 4.50).', 'danger')
             return redirect(url_for('student_dashboard'))
 
         new_request = ScholarshipRequest(student_id=current_user.id, status='under_curator_review')
         db.session.add(new_request)
 
-        curator = User.query.filter_by(role='curator', group_name=current_user.group_name).first()
-        if curator:
-            db.session.add(Notification(
-                user_id=curator.id,
-                message=f"Студент {current_user.username} выполнил нормативы портфолио и подал заявку на повышенную стипендию."
-            ))
+        if current_user.group_id:
+            notify_curators_of_group(
+                current_user.group_id,
+                f"Студент {current_user.username} выполнил нормативы портфолио и подал заявку на повышенную стипендию.")
 
         db.session.commit()
         flash('Заявка на повышенную стипендию сформирована и отправлена куратору группы для сверки статистики.', 'success')
         return redirect(url_for('student_dashboard'))
+
+    @app.route('/student/portfolio_pdf')
+    @login_required
+    def student_portfolio_pdf():
+        r = _abort_if_not_student()
+        if r: return r
+
+        buf = generate_portfolio_pdf(current_user.username)
+        if not buf:
+            flash('Ошибка генерации портфолио.', 'danger')
+            return redirect(url_for('student_history'))
+        return send_file(buf, as_attachment=True,
+                         download_name=f'портфолио_{current_user.username}.pdf',
+                         mimetype='application/pdf')

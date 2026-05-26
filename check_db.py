@@ -1,30 +1,41 @@
+"""
+Проверка содержимого БД.
+"""
 from app import create_app
-from models import db, Department, Specialty, Group, User
-from seed import init_test_db
+from models import db, Department, Specialty, Group, User, Event, Notification, ScholarshipRequest
 
 app = create_app()
 
 with app.app_context():
-    init_test_db(app)
-    
     depts = Department.query.all()
-    print('=== Отделения ===')
+    print(f'=== Отделения ({len(depts)}) ===')
     for d in depts:
-        specs_in_dept = ', '.join([s.abbreviation for s in d.specialties])
-        print(f'  {d.name}: {specs_in_dept}')
-    
+        specs_in = ', '.join([s.abbreviation for s in d.specialties])
+        print(f'  {d.name}: {specs_in}')
+
     specs = Specialty.query.all()
-    print('\n=== Специальности ===')
+    print(f'\n=== Специальности ({len(specs)}) ===')
     for s in specs:
-        dept_name = s.department_rel.name if s.department_rel else '—'
-        print(f'  [{s.abbreviation}] {s.name} — {s.code} → {dept_name}')
-    
+        dn = s.department_rel.name if s.department_rel else '—'
+        print(f'  [{s.abbreviation}] {s.name} — {s.code} → {dn}')
+
     groups = Group.query.all()
-    print('\n=== Группы ===')
+    print(f'\n=== Группы ({len(groups)}) ===')
     for g in groups:
-        print(f'  {g.name} | №{g.group_number or "—"} | спец: {g.specialty_name} ({g.specialty_code}) | тип: {g.budget_type} | год: {g.start_year}')
-    
-    print('\n=== Все пользователи ===')
+        print(f'  {g.name} | №{g.group_number or "—"} | {g.specialty_name} ({g.specialty_code}) | {g.budget_type or "—"} | {g.start_year or "—"}')
+
+    print(f'\n=== Пользователи ===')
     for u in User.query.all():
-        fio = ' '.join([x for x in [u.last_name, u.first_name, u.patronymic] if x])
-        print(f'  [{u.role:12s}] {u.username:12s} | {fio or "—":30s} | группа: {u.group_name or "—"}')
+        fio = ' '.join(filter(None, [u.last_name, u.first_name, u.patronymic]))
+        print(f'  [{u.role:12s}] {u.username:12s} | {fio or "—":30s} | гр: {u.group_name or "—"}')
+
+    print(f'\n=== Мероприятия: {Event.query.count()} ===')
+    print(f'  одобрено:   {Event.query.filter_by(status="approved").count()}')
+    print(f'  на проверке: {Event.query.filter_by(status="pending").count()}')
+    print(f'  в комиссии: {Event.query.filter_by(status="disputed").count()}')
+    print(f'  отклонено:  {Event.query.filter_by(status="rejected").count()}')
+
+    print(f'\n=== Уведомления: {Notification.query.count()} ===')
+    print(f'  непрочитанных: {Notification.query.filter_by(is_read=False).count()}')
+
+    print(f'\n=== Заявки на стипендию: {ScholarshipRequest.query.count()} ===')

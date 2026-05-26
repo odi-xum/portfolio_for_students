@@ -7,6 +7,9 @@ from .student import register_student_routes
 from .curator import register_curator_routes
 from .commission import register_commission_routes
 from .api import register_api_routes
+from .rating import register_rating_routes
+from .profile import register_profile_routes
+from .portfolio import register_portfolio_routes
 
 
 def register_routes(app):
@@ -17,3 +20,6 @@ def register_routes(app):
     register_curator_routes(app)
     register_commission_routes(app)
     register_api_routes(app)
+    register_rating_routes(app)
+    register_profile_routes(app)
+    register_portfolio_routes(app)

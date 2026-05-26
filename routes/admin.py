@@ -3,37 +3,64 @@
 """
 import json
 import os
-from datetime import datetime
 
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy.orm import joinedload
 
-from sqlalchemy import select
-from models import db, User, Group, Specialty, Department
-from helpers import generate_abbreviation, build_group_name, parse_date, BASE_UPLOAD_FOLDER
+from constants import UserRole
+from models import db, User, Group, Specialty, Department, Event, ScholarshipRequest
+from helpers import generate_abbreviation, build_group_name, parse_date, now_utc, log_audit, BASE_UPLOAD_FOLDER
 
 
 def _admin_only():
-    return "Доступ ограничен", 403
+    abort(403)
 
 
 def register_admin_routes(app):
 
-    # ------------------------------------------------------------------
-    #  DASHBOARD
-    # ------------------------------------------------------------------
     @app.route('/admin/dashboard')
     @login_required
     def admin_dashboard():
-        if current_user.role != 'admin':
-            return _admin_only()
-        return render_template('admin.html',
-                               users_count=User.query.count(),
-                               students_count=User.query.filter_by(role='student').count(),
-                               curators_count=User.query.filter_by(role='curator').count(),
-                               groups_count=Group.query.count())
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
+
+        from datetime import timedelta
+        now = now_utc()
+        month_ago = now - timedelta(days=30)
+
+        stats = {
+            'users_count': User.query.count(),
+            'students_count': User.query.filter_by(role='student').count(),
+            'curators_count': User.query.filter_by(role='curator').count(),
+            'groups_count': Group.query.count(),
+            'events_total': Event.query.count(),
+            'events_pending': Event.query.filter_by(status='pending').count(),
+            'events_approved': Event.query.filter_by(status='approved').count(),
+            'events_disputed': Event.query.filter_by(status='disputed').count(),
+            'events_rejected': Event.query.filter_by(status='rejected').count(),
+            'events_month': Event.query.filter(Event.created_at >= month_ago).count(),
+            'scholarship_requests': ScholarshipRequest.query.count(),
+            'active_scholarships': ScholarshipRequest.query.filter(
+                ScholarshipRequest.status.in_(['under_curator_review', 'under_commission_review'])
+            ).count(),
+            'dept_count': Department.query.count(),
+            'specialty_count': Specialty.query.count(),
+        }
+
+        # По отделениям
+        dept_stats = []
+        for d in Department.query.all():
+            spec_ids = [s.id for s in d.specialties]
+            grps = Group.query.filter(Group.specialty_id.in_(spec_ids)).all()
+            grp_ids = [g.id for g in grps]
+            stu_count = User.query.filter(
+                User.role == UserRole.STUDENT, User.group_id.in_(grp_ids)
+            ).count() if grp_ids else 0
+            dept_stats.append({'name': d.name, 'groups': len(grps), 'students': stu_count})
+
+        return render_template('admin.html', stats=stats, dept_stats=dept_stats)
 
     # ------------------------------------------------------------------
     #  ПОЛЬЗОВАТЕЛИ
@@ -41,8 +68,8 @@ def register_admin_routes(app):
     @app.route('/admin/users')
     @login_required
     def admin_users():
-        if current_user.role != 'admin':
-            return _admin_only()
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
         users = User.query.all()
         groups = Group.query.order_by(Group.name).all()
         return render_template('admin_users.html', users=users, groups=groups)
@@ -50,8 +77,8 @@ def register_admin_routes(app):
     @app.route('/admin/add_user', methods=['POST'])
     @login_required
     def admin_add_user():
-        if current_user.role != 'admin':
-            return _admin_only()
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
         username = request.form.get('username')
         password = request.form.get('password')
         role = request.form.get('role')
@@ -78,18 +105,20 @@ def register_admin_routes(app):
         )
         db.session.add(new_user)
         db.session.commit()
+        log_audit(current_user, 'user_create', f'Создан пользователь {username} ({role})')
         flash(f'Пользователь {username} ({role}) успешно добавлен.', 'success')
         return redirect(url_for('admin_users'))
 
     @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
     @login_required
     def admin_delete_user(user_id):
-        if current_user.role != 'admin':
-            return _admin_only()
-        user = db.session.get_or_404(User, user_id)
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
+        user = db.get_or_404(User, user_id)
         if user.id == current_user.id:
             flash('Вы не можете удалить самого себя!', 'danger')
             return redirect(url_for('admin_dashboard'))
+        log_audit(current_user, 'user_delete', f'Удалён пользователь #{user.id} {user.username} ({user.role})')
         db.session.delete(user)
         db.session.commit()
         flash('Пользователь успешно удален из системы.', 'success')
@@ -101,8 +130,8 @@ def register_admin_routes(app):
     @app.route('/admin/groups')
     @login_required
     def admin_groups():
-        if current_user.role != 'admin':
-            return _admin_only()
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
         groups = Group.query.options(
             joinedload(Group.curator), joinedload(Group.specialty_rel)
         ).order_by(Group.name).all()
@@ -120,8 +149,8 @@ def register_admin_routes(app):
     @app.route('/admin/add_group', methods=['POST'])
     @login_required
     def admin_add_group():
-        if current_user.role != 'admin':
-            return _admin_only()
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
 
         specialty_id = request.form.get('specialty_id')
         group_number = request.form.get('group_number')
@@ -138,7 +167,7 @@ def register_admin_routes(app):
             flash('Выберите специальность и укажите курс.', 'danger')
             return redirect(url_for('admin_groups'))
 
-        specialty = db.session.get_or_404(Specialty, int(specialty_id))
+        specialty = db.get_or_404(Specialty, int(specialty_id))
         name = build_group_name(specialty.abbreviation, budget_type, start_year_str)
 
         if Group.query.filter_by(name=name).first():
@@ -156,24 +185,25 @@ def register_admin_routes(app):
             course=int(course),
             department=department,
             form_of_study=form_of_study,
-            curator_id=int(curator_id) if curator_id else None,
             start_date=parse_date(start_date_str),
-            end_date=parse_date(end_date_str)
+            end_date=parse_date(end_date_str),
+            curator_id=int(curator_id) if curator_id else None
         )
         db.session.add(new_group)
         db.session.commit()
+        log_audit(current_user, 'group_create', f'Создана группа {name}')
         flash(f'Группа {name} успешно создана.', 'success')
         return redirect(url_for('admin_groups'))
 
     @app.route('/admin/edit_group/<int:group_id>', methods=['GET', 'POST'])
     @login_required
     def admin_edit_group(group_id):
-        if current_user.role != 'admin':
-            return _admin_only()
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
 
-        group = Group.query.options(
+        group = db.session.query(Group).options(
             joinedload(Group.curator), joinedload(Group.specialty_rel)
-        ).get_or_404(group_id)
+        ).filter(Group.id == group_id).one_or_404()
         curators = User.query.filter_by(role='curator').all()
         specialties = Specialty.query.options(
             joinedload(Specialty.department_rel)
@@ -189,6 +219,7 @@ def register_admin_routes(app):
             group.start_date = parse_date(request.form.get('start_date'))
             group.end_date = parse_date(request.form.get('end_date'))
             db.session.commit()
+            log_audit(current_user, 'group_edit', f'Обновлена группа {group.name}')
             flash(f'Группа {group.name} обновлена.', 'success')
             return redirect(url_for('admin_groups'))
 
@@ -198,13 +229,14 @@ def register_admin_routes(app):
     @app.route('/admin/delete_group/<int:group_id>', methods=['POST'])
     @login_required
     def admin_delete_group(group_id):
-        if current_user.role != 'admin':
-            return _admin_only()
-        group = Group.query.get_or_404(group_id)
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
+        group = db.get_or_404(Group, group_id)
         students_in_group = User.query.filter_by(group_id=group_id).count()
         if students_in_group > 0:
             flash(f'Нельзя удалить группу: к ней привязано {students_in_group} студентов.', 'danger')
             return redirect(url_for('admin_groups'))
+        log_audit(current_user, 'group_delete', f'Удалена группа {group.name}')
         db.session.delete(group)
         db.session.commit()
         flash(f'Группа {group.name} удалена.', 'success')
@@ -216,8 +248,8 @@ def register_admin_routes(app):
     @app.route('/admin/add_specialty', methods=['POST'])
     @login_required
     def admin_add_specialty():
-        if current_user.role != 'admin':
-            return _admin_only()
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
         name = request.form.get('specialty_name')
         code = request.form.get('specialty_code')
         department_id = request.form.get('department_id')
@@ -237,16 +269,17 @@ def register_admin_routes(app):
         db.session.add(new_specialty)
         db.session.commit()
 
-        dept_name = Department.query.get(int(department_id)).name if department_id else '—'
+        dept = db.session.get(Department, int(department_id)) if department_id else None
+        dept_name = dept.name if dept else '—'
         flash(f'Специальность «{name}» ({abbreviation}) добавлена в {dept_name}.', 'success')
         return redirect(url_for('admin_groups'))
 
     @app.route('/admin/delete_specialty/<int:specialty_id>', methods=['POST'])
     @login_required
     def admin_delete_specialty(specialty_id):
-        if current_user.role != 'admin':
-            return _admin_only()
-        specialty = Specialty.query.get_or_404(specialty_id)
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
+        specialty = db.get_or_404(Specialty, specialty_id)
         groups_count = Group.query.filter_by(specialty_id=specialty_id).count()
         if groups_count > 0:
             flash(f'Нельзя удалить специальность: к ней привязано {groups_count} групп.', 'danger')
@@ -262,8 +295,8 @@ def register_admin_routes(app):
     @app.route('/admin/import_students', methods=['POST'])
     @login_required
     def admin_import_students():
-        if current_user.role != 'admin':
-            return _admin_only()
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
 
         file = request.files.get('json_file')
         if not file:
@@ -316,4 +349,66 @@ def register_admin_routes(app):
         db.session.commit()
         flash(f'Импортировано: {imported}, пропущено (дубликаты/ошибки): {skipped}.',
               'success' if imported > 0 else 'warning')
+        return redirect(url_for('admin_users'))
+
+    # ------------------------------------------------------------------
+    #  АУДИТ-ЛОГ
+    # ------------------------------------------------------------------
+    @app.route('/admin/audit', methods=['GET'])
+    @login_required
+    def admin_audit():
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
+
+        from models import AuditLog
+        from sqlalchemy import desc
+
+        page = request.args.get('page', 1, type=int)
+        per_page = 50
+        action_filter = request.args.get('action', '')
+        user_filter = request.args.get('username', '')
+
+        q = AuditLog.query
+
+        if action_filter:
+            q = q.filter(AuditLog.action == action_filter)
+        if user_filter:
+            q = q.filter(AuditLog.username.ilike(f'%{user_filter}%'))
+
+        q = q.order_by(desc(AuditLog.created_at))
+
+        total = q.count()
+        offset = (page - 1) * per_page
+        logs = q.offset(offset).limit(per_page).all()
+
+        # Все уникальные действия для фильтра
+        actions = [r[0] for r in db.session.query(AuditLog.action).distinct().order_by(AuditLog.action).all()]
+
+        return render_template('admin_audit.html',
+                               logs=logs, page=page, per_page=per_page,
+                               total=total, actions=actions,
+                               action_filter=action_filter,
+                               user_filter=user_filter)
+
+    # ------------------------------------------------------------------
+    #  ИМПОРТ СТУДЕНТОВ ИЗ EXCEL
+    # ------------------------------------------------------------------
+    @app.route('/admin/import_excel', methods=['POST'])
+    @login_required
+    def admin_import_excel():
+        if current_user.role != UserRole.ADMIN:
+            _admin_only()
+
+        file = request.files.get('excel_file')
+        if not file:
+            flash('Файл не выбран.', 'danger')
+            return redirect(url_for('admin_users'))
+
+        from excel_import import import_students_from_excel
+        imported, skipped, errors = import_students_from_excel(file)
+
+        msg = f'Импортировано: {imported}, пропущено: {skipped}.'
+        if errors:
+            msg += f' Ошибки: {"; ".join(errors[:3])}'
+        flash(msg, 'success' if imported > 0 else 'warning')
         return redirect(url_for('admin_users'))

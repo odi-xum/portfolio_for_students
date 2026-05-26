@@ -182,7 +182,7 @@
                 <select id="curator_id" name="curator_id" class="form-control">
                     <option value="">— Не назначен —</option>
                     {% for c in curators %}
-                    <option value="{{ c.id }}">{{ c.username }}</option>
+                    <option value="{{ c.id }}">{{ c.last_name or c.username }} {{ c.first_name or '' }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -266,7 +266,7 @@
                 <td>{{ g.form_of_study }}</td>
                 <td>
                     {% if g.curator %}
-                    <span style="color: var(--blue);">{{ g.curator.username }}</span>
+                    <span style="color: var(--blue);">{{ g.curator.last_name or g.curator.username }} {{ g.curator.first_name or '' }}</span>
                     {% else %}
                     <span style="color: var(--gray);">—</span>
                     {% endif %}

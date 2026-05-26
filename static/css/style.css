@@ -52,6 +52,9 @@ body {
 }
 
 .navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-weight: 700;
     color: var(--orange);
     font-size: 1.3rem;
@@ -313,6 +316,117 @@ tr:last-child td {
 
 tr:hover td {
     background-color: var(--bg3);
+}
+
+/* ==========================================================================
+   11. СВЕТЛАЯ ТЕМА (GRUVBOX MATERIAL LIGHT MEDIUM)
+    ========================================================================== */
+.light-theme {
+    --bg0: #fbf1c7;
+    --bg1: #f2e5bc;
+    --bg2: #d5c4a1;
+    --bg3: #bdae93;
+
+    --fg0: #654735;
+    --fg1: #5a4a3a;
+
+    --red: #c14a4a;
+    --green: #6c782e;
+    --yellow: #b47109;
+    --blue: #45707a;
+    --orange: #b4662c;
+    --purple: #b16186;
+    --gray: #a89984;
+}
+
+/* ==========================================================================
+   12. КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ
+    ========================================================================== */
+.theme-toggle {
+    background: none;
+    border: 1px solid var(--gray);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--fg1);
+    margin-right: 0.75rem;
+    vertical-align: middle;
+}
+
+.theme-toggle:hover {
+    background: var(--bg3);
+    border-color: var(--orange);
+    color: var(--orange);
+}
+
+/* ==========================================================================
+   13. LAYOUT UTILITIES
+    ========================================================================== */
+.flex-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.stat-card { margin: 0; text-align: center; padding: 1.25rem; }
+.stat-card .stat-icon { font-size: 2rem; line-height: 1; }
+.stat-card .stat-label { color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem; }
+.stat-card .stat-value { font-size: 1.75rem; font-weight: bold; }
+.stat-value.c-green { color: var(--green); }
+.stat-value.c-yellow { color: var(--yellow); }
+.stat-value.c-orange { color: var(--orange); }
+.stat-value.c-purple { color: var(--purple); }
+.stat-value.c-blue   { color: var(--blue); }
+.welcome-icon { font-size: 3rem; line-height: 1; }
+.welcome-title { color: var(--fg0); margin: 0 0 0.5rem 0; }
+.welcome-text { color: var(--fg1); margin: 0; }
+.action-card { margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer; }
+.action-card:hover { transform: translateY(-2px); }
+.action-card .action-icon { font-size: 2.5rem; line-height: 1; }
+.action-card h3 { color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem; }
+.action-card p { color: var(--gray); margin: 0; font-size: 0.9rem; }
+.section-heading { margin-bottom: 1.5rem; color: var(--blue); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem; }
+.icon-text { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--fg1); }
+
+/* Кнопка для страницы логина — фиксированная, в правом углу */
+.theme-toggle-login {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10000;
+    background: var(--bg2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Прячем логин-кнопку, когда есть навбар (авторизованные пользователи) */
+body:has(.navbar) .theme-toggle-login {
+    display: none;
 }
 
 /* ==========================================================================

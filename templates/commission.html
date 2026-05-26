@@ -3,13 +3,12 @@
 {% block title %}Панель комиссии — ИС Портфолио{% endblock %}
 
 {% block content %}
-<!-- Приветственная карточка -->
 <div class="form-card" style="margin-bottom: 2.5rem;">
-    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
-        <div style="font-size: 3rem; line-height: 1;">⚖️</div>
+    <div class="flex-row">
+        <div class="welcome-icon">⚖️</div>
         <div>
-            <h2 style="color: var(--fg0); margin: 0 0 0.5rem 0;">Добро пожаловать, {{ current_user.username }}</h2>
-            <p style="color: var(--fg1); margin: 0;">
+            <h2 class="welcome-title">Добро пожаловать, {% if current_user.last_name or current_user.first_name %}{{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}{% else %}{{ current_user.username }}{% endif %}</h2>
+            <p class="welcome-text">
                 Панель аттестационной комиссии. Разрешайте спорные ситуации по публикациям
                 и принимайте финальные решения по заявкам на повышенную стипендию.
             </p>
@@ -17,64 +16,60 @@
     </div>
 </div>
 
-<!-- Быстрая статистика -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">⚡</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Активных споров</div>
-        <div style="color: var(--purple); font-size: 1.75rem; font-weight: bold;">{{ active_disputes }}</div>
+<div class="stat-grid">
+    <div class="form-card stat-card">
+        <div class="stat-icon">⚖️</div>
+        <div class="stat-label">Активные споры</div>
+        <div class="stat-value c-orange">{{ active_disputes }}</div>
     </div>
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">📋</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Заявок на стипендию</div>
-        <div style="color: var(--yellow); font-size: 1.75rem; font-weight: bold;">{{ active_scholarships }}</div>
+    <div class="form-card stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-label">Заявки на стипендию</div>
+        <div class="stat-value c-yellow">{{ active_scholarships }}</div>
     </div>
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">🏛️</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Решено споров</div>
-        <div style="color: var(--green); font-size: 1.75rem; font-weight: bold;">{{ resolved_events_count }}</div>
+    <div class="form-card stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Решено споров</div>
+        <div class="stat-value c-green">{{ resolved_events_count }}</div>
     </div>
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">📜</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Решено стипендий</div>
-        <div style="color: var(--green); font-size: 1.75rem; font-weight: bold;">{{ resolved_scholarships_count }}</div>
+    <div class="form-card stat-card">
+        <div class="stat-icon">📚</div>
+        <div class="stat-label">Решено стипендий</div>
+        <div class="stat-value c-purple">{{ resolved_scholarships_count }}</div>
     </div>
 </div>
 
-<!-- Быстрые действия -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-
-    <a href="{{ url_for('commission_disputes') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
-        <div style="font-size: 2.5rem; line-height: 1;">⚔️</div>
+<div class="action-grid">
+    <a href="{{ url_for('commission_disputes') }}" class="form-card action-card">
+        <div class="action-icon">⚖️</div>
         <div>
-            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Разрешение споров</h3>
-            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Арбитраж постов, отклонённых куратором</p>
+            <h3>Спорные публикации</h3>
+            <p>Арбитраж постов, отклонённых кураторами</p>
         </div>
     </a>
 
-    <a href="{{ url_for('commission_scholarships') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
-        <div style="font-size: 2.5rem; line-height: 1;">🏆</div>
+    <a href="{{ url_for('commission_scholarships') }}" class="form-card action-card">
+        <div class="action-icon">💎</div>
         <div>
-            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Заявки на стипендию</h3>
-            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Рассмотрение запросов на повышенную стипендию</p>
+            <h3>Заявки на стипендию</h3>
+            <p>Рассмотрение заявок на повышенную стипендию</p>
         </div>
     </a>
 
-    <a href="{{ url_for('commission_archive') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
-        <div style="font-size: 2.5rem; line-height: 1;">📚</div>
+    <a href="{{ url_for('commission_archive') }}" class="form-card action-card">
+        <div class="action-icon">📚</div>
         <div>
-            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Архив решений</h3>
-            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">История вынесенных вердиктов с возможностью пересмотра</p>
+            <h3>Архив решений</h3>
+            <p>История вынесенных решений</p>
         </div>
     </a>
 
-    <a href="{{ url_for('commission_export') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
-        <div style="font-size: 2.5rem; line-height: 1;">📊</div>
+    <a href="{{ url_for('commission_export') }}" class="form-card action-card">
+        <div class="action-icon">📊</div>
         <div>
-            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Экспорт в Excel</h3>
-            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Сводка по группам, детализация и графики</p>
+            <h3>Экспорт данных</h3>
+            <p>Выгрузка статистики по всем группам</p>
         </div>
     </a>
-
 </div>
 {% endblock %}

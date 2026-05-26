@@ -37,6 +37,7 @@
                     <th>ID</th>
                     <th>Студент</th>
                     <th>Название публикации</th>
+                    <th>Категория</th>
                     <th>Балл</th>
                     <th>Статус</th>
                     <th>Ваш комментарий</th>
@@ -49,6 +50,7 @@
                     <td>{{ event.id }}</td>
                     <td style="font-weight: bold; color: var(--fg0);">{{ event.student.username if event.student else 'Удален' }}</td>
                     <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ event.title }}</td>
+                    <td>{{ event.category_label }}</td>
                     <td style="text-align: center; font-weight: bold; color: var(--aqua);">{{ event.score if event.score else '—' }}</td>
                     <td>
                         {% if event.status == 'approved' %}
@@ -70,7 +72,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" style="text-align: center; color: var(--gray);">Нет вынесенных решений.</td>
+                    <td colspan="8" style="text-align: center; color: var(--gray);">Нет вынесенных решений.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -111,6 +113,7 @@
                 '<td>' + e.id + '</td>' +
                 '<td style="font-weight: bold; color: var(--fg0);">' + e.student + '</td>' +
                 '<td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + e.title + '</td>' +
+                '<td>' + (e.category || 'Без категории') + '</td>' +
                 '<td style="text-align: center;">' + score + '</td>' +
                 '<td>' + st + '</td>' +
                 '<td style="font-style: italic; color: var(--gray); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + comment + '</td>' +

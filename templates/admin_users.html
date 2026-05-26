@@ -58,6 +58,30 @@
     </form>
 </div>
 
+<!-- Импорт из Excel -->
+<div class="form-card" style="margin-bottom: 2rem;">
+    <h3 style="margin-bottom: 1.5rem; color: var(--green); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
+        📥 Импорт студентов из Excel
+    </h3>
+    <form method="POST" action="/admin/import_excel" enctype="multipart/form-data">
+        <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 250px;">
+                <label for="excel_file">Файл .xlsx</label>
+                <input type="file" id="excel_file" name="excel_file" class="form-control" accept=".xlsx" required style="padding: 0.5rem;">
+            </div>
+            <button type="submit" class="btn btn-success">Импортировать</button>
+        </div>
+    </form>
+    <details style="margin-top: 1rem;">
+        <summary style="color: var(--gray); cursor: pointer; font-size: 0.9rem;">Пример формата Excel</summary>
+        <div style="margin-top: 0.5rem; color: var(--fg1); font-size: 0.85rem;">
+            <p>Заголовки колонок (порядок любой): <strong>Фамилия, Имя, Отчество, Группа, Логин, Пароль</strong></p>
+            <p>Колонка <strong>Логин</strong> обязательна. Остальные — опционально.</p>
+            <p>Название группы должно совпадать с существующей в системе.</p>
+        </div>
+    </details>
+</div>
+
 <!-- Импорт из JSON -->
 <div class="form-card">
     <h3 style="margin-bottom: 1.5rem; color: var(--purple); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">

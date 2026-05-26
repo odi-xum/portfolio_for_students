@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Страница не найдена — ИС Портфолио{% endblock %}
+{% block content %}
+<div style="text-align: center; padding: 4rem 1rem;">
+    <div style="font-size: 5rem; line-height: 1; margin-bottom: 1rem;">🔍</div>
+    <h1 style="color: var(--orange); margin-bottom: 1rem;">404 — Страница не найдена</h1>
+    <p style="color: var(--fg1); font-size: 1.1rem; max-width: 500px; margin: 0 auto;">
+        Запрашиваемая страница не существует. Возможно, она была удалена или адрес содержит ошибку.
+    </p>
+    <a href="{{ url_for('login') if not current_user.is_authenticated else '#' }}"
+       class="btn btn-primary" style="margin-top: 2rem; display: inline-block;
+       {% if current_user.is_authenticated %}display:none;{% endif %}">
+        На главную
+    </a>
+</div>
+{% endblock %}

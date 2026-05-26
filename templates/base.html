@@ -7,13 +7,19 @@
 </head>
 <body>
 
+    <button class="theme-toggle theme-toggle-login" id="themeToggleLogin" title="Сменить тему">☀️</button>
+
     {% if current_user.is_authenticated %}
     <nav class="navbar">
-        <div class="navbar-brand">ИС Портфолио</div>
+        <div class="navbar-brand">
+            <button class="theme-toggle" id="themeToggle" title="Сменить тему">☀️</button>
+            ИС Портфолио
+        </div>
         <div class="navbar-user">
             <a href="{{ url_for('notifications') }}" style="color: var(--fg1); text-decoration: none; margin-right: 1rem; position: relative;">
                 🔔 <span id="unread-badge" style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:0.7rem; font-weight:bold; border-radius:50%; min-width:16px; height:16px; text-align:center; line-height:16px; padding:0 3px;"></span>
             </a>
+            <a href="{{ url_for('profile') }}" style="color: var(--fg1); text-decoration: none; margin-right: 0.75rem;">👤</a>
             Роль: <strong>{{ current_user.role }}</strong> |
             {% if current_user.last_name or current_user.first_name %}
             {{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}
@@ -31,14 +37,17 @@
             <li><a href="{{ url_for('admin_dashboard') }}">Панель</a></li>
             <li><a href="{{ url_for('admin_users') }}">Пользователи</a></li>
             <li><a href="{{ url_for('admin_groups') }}">Группы</a></li>
+            <li><a href="{{ url_for('admin_audit') }}">Аудит</a></li>
             {% elif current_user.role == 'student' %}
             <li><a href="{{ url_for('student_dashboard') }}">Моя панель</a></li>
             <li><a href="{{ url_for('student_create') }}">Создать пост</a></li>
             <li><a href="{{ url_for('student_history') }}">История</a></li>
+            <li><a href="{{ url_for('rating') }}">Рейтинг</a></li>
             {% elif current_user.role == 'curator' %}
             <li><a href="{{ url_for('curator_dashboard') }}">Панель куратора</a></li>
             <li><a href="{{ url_for('curator_pending') }}">Заявки</a></li>
             <li><a href="{{ url_for('curator_resolved') }}">Журнал</a></li>
+            <li><a href="{{ url_for('rating') }}">Рейтинг</a></li>
             {% elif current_user.role == 'commission' %}
             <li><a href="{{ url_for('commission_dashboard') }}">Панель комиссии</a></li>
             <li><a href="{{ url_for('commission_disputes') }}">Споры</a></li>
@@ -130,22 +139,65 @@
 
 <script>
 (function() {
-    function updateBadge() {
-        fetch('/api/notifications/count')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                var badge = document.getElementById('unread-badge');
-                if (data.unread > 0) {
-                    badge.textContent = data.unread > 99 ? '99+' : data.unread;
-                    badge.style.display = '';
-                } else {
-                    badge.style.display = 'none';
-                }
-            })
-            .catch(function() {});
+    // CSRF — вставляем токен во все формы
+    var csrfInput = '<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">';
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('form').forEach(function(f) {
+            if (!f.querySelector('input[name="_csrf_token"]')) {
+                f.insertAdjacentHTML('beforeend', csrfInput);
+            }
+        });
+    });
+
+    // Уведомления — SSE + fallback
+    var badge = document.getElementById('unread-badge');
+    function show(n) {
+        if (n > 0) { badge.textContent = n > 99 ? '99+' : n; badge.style.display = ''; }
+        else { badge.style.display = 'none'; }
     }
-    updateBadge();
-    setInterval(updateBadge, 15000);
+    {% if current_user.is_authenticated %}
+    if (window.EventSource) {
+        var es = new EventSource('/api/notifications/stream');
+        es.addEventListener('message', function(e) {
+            try { show(JSON.parse(e.data).unread); } catch(_) {}
+        });
+        es.addEventListener('error', function() { es.close(); });
+    }
+    function poll() {
+        fetch('/api/notifications/count').then(function(r) { return r.json(); })
+            .then(function(d) { show(d.unread); }).catch(function() {});
+    }
+    poll();
+    setInterval(poll, 30000);
+    {% endif %}
+})();
+</script>
+
+<script>
+(function() {
+    var btns = document.querySelectorAll('.theme-toggle');
+    if (!btns.length) return;
+
+    var KEY = 'diplom_theme';
+
+    function setTheme(mode) {
+        var isLight = mode === 'light';
+        document.body.classList.toggle('light-theme', isLight);
+        btns.forEach(function(b) {
+            b.textContent = isLight ? '🌙' : '☀️';
+            b.title = isLight ? 'Тёмная тема' : 'Светлая тема';
+        });
+        localStorage.setItem(KEY, mode);
+    }
+
+    btns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            setTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light');
+        });
+    });
+
+    var saved = localStorage.getItem(KEY);
+    if (saved === 'light') setTheme('light');
 })();
 </script>
 

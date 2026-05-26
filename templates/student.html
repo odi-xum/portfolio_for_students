@@ -3,13 +3,12 @@
 {% block title %}Моя панель — ИС Портфолио{% endblock %}
 
 {% block content %}
-<!-- Приветственная карточка -->
 <div class="form-card" style="margin-bottom: 2.5rem;">
-    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
-        <div style="font-size: 3rem; line-height: 1;">🎓</div>
+    <div class="flex-row">
+        <div class="welcome-icon">🎓</div>
         <div>
-            <h2 style="color: var(--fg0); margin: 0 0 0.5rem 0;">Добро пожаловать, {{ current_user.username }}</h2>
-            <p style="color: var(--fg1); margin: 0;">
+            <h2 class="welcome-title">Добро пожаловать, {% if current_user.last_name or current_user.first_name %}{{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}{% else %}{{ current_user.username }}{% endif %}</h2>
+            <p class="welcome-text">
                 Добро пожаловать в систему портфолио! Здесь вы можете публиковать свои достижения,
                 отслеживать их статус проверки и подавать заявки на повышенную стипендию.
             </p>
@@ -17,52 +16,93 @@
     </div>
 </div>
 
-<!-- Быстрая статистика -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">📊</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Всего постов</div>
-        <div style="color: var(--fg0); font-size: 1.75rem; font-weight: bold;">{{ total }}</div>
+<div class="stat-grid">
+    <div class="form-card stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-label">Всего постов</div>
+        <div class="stat-value c-blue">{{ total }}</div>
     </div>
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">✅</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Одобрено</div>
-        <div style="color: var(--green); font-size: 1.75rem; font-weight: bold;">{{ approved }}</div>
+    <div class="form-card stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Одобрено</div>
+        <div class="stat-value c-green">{{ approved }}</div>
     </div>
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">⏳</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">На проверке</div>
-        <div style="color: var(--yellow); font-size: 1.75rem; font-weight: bold;">{{ pending }}</div>
+    <div class="form-card stat-card">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">На проверке</div>
+        <div class="stat-value c-yellow">{{ pending }}</div>
     </div>
-    <div class="form-card" style="margin: 0; text-align: center; padding: 1.25rem;">
-        <div style="font-size: 2rem; line-height: 1;">⚖️</div>
-        <div style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">В комиссии</div>
-        <div style="color: var(--orange); font-size: 1.75rem; font-weight: bold;">{{ disputed }}</div>
+    <div class="form-card stat-card">
+        <div class="stat-icon">⚖️</div>
+        <div class="stat-label">В комиссии</div>
+        <div class="stat-value c-orange">{{ disputed }}</div>
     </div>
 </div>
 
-<!-- Быстрые действия -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-
-    <a href="{{ url_for('student_create') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
-        <div style="font-size: 2.5rem; line-height: 1;">📝</div>
+<div class="action-grid">
+    <a href="{{ url_for('student_create') }}" class="form-card action-card">
+        <div class="action-icon">📝</div>
         <div>
-            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">Создать мероприятие</h3>
-            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Опубликовать новое достижение с подтверждающими документами</p>
+            <h3>Создать мероприятие</h3>
+            <p>Добавить новое достижение или сертификат к себе в портфолио</p>
         </div>
     </a>
 
-    <a href="{{ url_for('student_history') }}" class="form-card" style="margin: 0; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: transform 0.15s ease; cursor: pointer;">
-        <div style="font-size: 2.5rem; line-height: 1;">📋</div>
+    <a href="{{ url_for('student_history') }}" class="form-card action-card">
+        <div class="action-icon">📋</div>
         <div>
-            <h3 style="color: var(--fg0); margin: 0 0 0.25rem 0; font-size: 1.1rem;">История публикаций</h3>
-            <p style="color: var(--gray); margin: 0; font-size: 0.9rem;">Просмотр всех постов с поиском и фильтрацией</p>
+            <h3>История постов</h3>
+            <p>Просмотр всех публикаций и статусов их проверки</p>
         </div>
     </a>
 
+    <a href="{{ url_for('rating') }}" class="form-card action-card">
+        <div class="action-icon">🏆</div>
+        <div>
+            <h3>Рейтинг</h3>
+            <p>Сводная таблица с баллами и прогрессом до стипендии</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('student_portfolio_pdf') }}" class="form-card action-card">
+        <div class="action-icon">📄</div>
+        <div>
+            <h3>Экспорт портфолио</h3>
+            <p>Скачать портфолио в PDF для печати</p>
+        </div>
+    </a>
 </div>
 
-<!-- Запрос стипендии (только если доступно) -->
+{% if ok_stats %}
+<div class="form-card" style="margin-bottom: 2rem;">
+    <h3 style="color: var(--fg0); margin-bottom: 1rem;">Общие компетенции (ОК)</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem;">
+        {% for ok in ok_stats %}
+        <div style="padding: 0.75rem; text-align: center; border-radius: 6px;
+                    background: var(--bg1); border: 1px solid var(--bg3);
+                    {% if ok.done %}border-color: var(--green);{% endif %}">
+            <div style="font-size: 1.5rem; line-height: 1; margin-bottom: 0.25rem;">
+                {% if ok.done %}✅{% elif ok.approved > 0 %}⏳{% else %}⬜{% endif %}
+            </div>
+            <div style="font-weight: bold; font-size: 0.9rem; color: var(--fg0);">{{ ok.ok }}</div>
+            <div style="font-size: 0.8rem; color: var(--gray);">
+                {{ ok.approved }}/3 одобрено
+                {% if ok.pending > 0 %}<br>⏳ {{ ok.pending }} на проверке{% endif %}
+                {% if ok.has_override %}<br><span style="color: var(--green);">✓ засчитано куратором</span>{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if ok_all_done %}
+    <form action="{{ url_for('student_notify_ok') }}" method="POST" style="margin-top: 1rem; text-align: center;">
+        <button type="submit" class="btn btn-success" style="padding: 0.6rem 1.5rem;">
+            📨 Уведомить куратора о выполнении ОК
+        </button>
+    </form>
+    {% endif %}
+</div>
+{% endif %}
+
 {% if can_request %}
 <div class="form-card" style="border-left: 4px solid var(--yellow); margin-bottom: 2rem;">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">

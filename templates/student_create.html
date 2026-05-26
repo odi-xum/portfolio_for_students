@@ -35,6 +35,25 @@
                       placeholder="Опишите вашу роль в мероприятии или добавьте заметки..."></textarea>
         </div>
 
+        <div class="form-group">
+            <label for="category" style="font-weight: bold; color: var(--fg1);">Общая компетенция (ОК)</label>
+            <select id="category" name="category" class="form-control">
+                <option value="">— Без категории —</option>
+                <option value="OK-1">OK-1</option>
+                <option value="OK-2">OK-2</option>
+                <option value="OK-3">OK-3</option>
+                <option value="OK-4">OK-4</option>
+                <option value="OK-5">OK-5</option>
+                <option value="OK-6">OK-6</option>
+                <option value="OK-7">OK-7</option>
+                <option value="OK-8">OK-8</option>
+                <option value="OK-9">OK-9</option>
+            </select>
+            <small style="color: var(--gray); display: block; margin-top: 0.25rem;">
+                Выберите, к какой общей компетенции относится мероприятие. Если не уверены — оставьте «Без категории».
+            </small>
+        </div>
+
         <div class="form-group" style="margin-bottom: 1.5rem;">
             <label for="files" style="font-weight: bold; color: var(--fg1);">Документы-доказательства (PNG, JPG, PDF) *</label>
             <input type="file" id="files" name="files" class="form-control" multiple accept=".png, .jpg, .jpeg, .pdf" style="padding: 0.5rem;">

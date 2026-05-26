@@ -36,7 +36,7 @@
             <div>
                 <h3 style="color: var(--fg0); margin: 0 0 0.5rem 0;">{{ event.title }}</h3>
                 <small style="color: var(--gray);">
-                    Автор: <strong>{{ event.student.username if event.student else 'Удаленный пользователь' }}</strong> | ID поста: {{ event.id }} | Дата: {{ event.created_at.strftime('%d.%m.%Y %H:%M') }}
+                    Автор: <strong>{{ event.student.username if event.student else 'Удаленный пользователь' }}</strong> | ID поста: {{ event.id }} | Категория: <strong>{{ event.category_label }}</strong> | Дата: {{ event.created_at.strftime('%d.%m.%Y %H:%M') }}
                 </small>
             </div>
             <span class="status-badge" style="background-color: var(--yellow); color: var(--bg0); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">На проверке</span>
@@ -115,7 +115,7 @@
 
         container.innerHTML = events.map(function(e) {
             var desc = e.description || 'Описание отсутствует.';
-            var studentInfo = '<small style="color: var(--gray);">Автор: <strong>' + e.student + '</strong> | ID поста: ' + e.id + ' | Дата: ' + e.created_at + '</small>';
+            var studentInfo = '<small style="color: var(--gray);">Автор: <strong>' + e.student + '</strong> | ID поста: ' + e.id + ' | Категория: <strong>' + (e.category || 'Без категории') + '</strong> | Дата: ' + e.created_at + '</small>';
             return '<div class="post-card" style="padding: 2rem; background-color: var(--bg1); margin-bottom: 1.5rem; border-left: 4px solid var(--yellow); border-radius: 4px;">' +
                 '<div class="post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">' +
                 '<div><h3 style="color: var(--fg0); margin: 0 0 0.5rem 0;">' + e.title + '</h3>' + studentInfo + '</div>' +

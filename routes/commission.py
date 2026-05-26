@@ -1,10 +1,11 @@
 """
 Маршруты комиссии: панель, споры, стипендии, архив, пересмотр.
 """
-from flask import render_template, request, redirect, url_for, flash, send_file
+from flask import abort, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 
+from constants import UserRole
 from models import db, Event, Notification, ScholarshipRequest, User, Group
 from helpers import now_utc
 from export import generate_report
@@ -15,8 +16,8 @@ def register_commission_routes(app):
     @app.route('/commission/dashboard')
     @login_required
     def commission_dashboard():
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
 
         active_disputes = Event.query.filter_by(status='disputed').count()
         active_scholarships = ScholarshipRequest.query.filter(
@@ -40,8 +41,8 @@ def register_commission_routes(app):
     @app.route('/commission/disputes')
     @login_required
     def commission_disputes():
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
         disputed_events = Event.query.options(joinedload(Event.student)).filter_by(
             status='disputed'
         ).order_by(Event.created_at.asc()).all()
@@ -50,8 +51,8 @@ def register_commission_routes(app):
     @app.route('/commission/scholarships')
     @login_required
     def commission_scholarships():
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
         scholarship_requests = ScholarshipRequest.query.options(
             joinedload(ScholarshipRequest.student)
         ).filter(
@@ -62,8 +63,8 @@ def register_commission_routes(app):
     @app.route('/commission/archive')
     @login_required
     def commission_archive():
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
 
         resolved_events = Event.query.options(joinedload(Event.student)).filter(
             Event.status.in_(['approved', 'rejected']),
@@ -84,10 +85,10 @@ def register_commission_routes(app):
     @app.route('/commission/resolve_dispute/<int:event_id>', methods=['POST'])
     @login_required
     def resolve_dispute(event_id):
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
 
-        event = Event.query.get_or_404(event_id)
+        event = db.get_or_404(Event, event_id)
         decision = request.form.get('decision')
         comment = request.form.get('commission_comment')
 
@@ -119,10 +120,10 @@ def register_commission_routes(app):
     @app.route('/commission/scholarship_decision/<int:req_id>', methods=['POST'])
     @login_required
     def scholarship_decision(req_id):
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
 
-        req = ScholarshipRequest.query.get_or_404(req_id)
+        req = db.get_or_404(ScholarshipRequest, req_id)
         decision = request.form.get('decision')
         req.commission_reviewed_at = now_utc()
 
@@ -149,10 +150,10 @@ def register_commission_routes(app):
     @app.route('/commission/reconsider_event/<int:event_id>', methods=['POST'])
     @login_required
     def reconsider_event(event_id):
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
 
-        event = Event.query.get_or_404(event_id)
+        event = db.get_or_404(Event, event_id)
         event.status = 'disputed'
         event.commission_reviewed_at = None
         event.commission_comment = f"[Отправлено на пересмотр] {event.commission_comment or ''}"
@@ -169,10 +170,10 @@ def register_commission_routes(app):
     @app.route('/commission/reconsider_scholarship/<int:req_id>', methods=['POST'])
     @login_required
     def reconsider_scholarship(req_id):
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
 
-        req = ScholarshipRequest.query.get_or_404(req_id)
+        req = db.get_or_404(ScholarshipRequest, req_id)
         req.status = 'under_commission_review'
         req.commission_reviewed_at = None
 
@@ -190,8 +191,8 @@ def register_commission_routes(app):
     @app.route('/commission/export', methods=['GET', 'POST'])
     @login_required
     def commission_export():
-        if current_user.role != 'commission':
-            return "Доступ ограничен", 403
+        if current_user.role != UserRole.COMMISSION:
+            abort(403)
 
         groups = Group.query.order_by(Group.name).all()
         all_students = User.query.filter_by(role='student').order_by(User.last_name).all()

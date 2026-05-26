@@ -1,29 +1,33 @@
 """
 API-эндпоинты и маршруты уведомлений.
 """
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
 
+from constants import EventStatus
 from models import db, User, Event, Notification
 
 
 def register_api_routes(app):
 
-    # ==================================================================
-    #  ОБЩИЕ МАРШРУТЫ
-    # ==================================================================
     @app.route('/event/<int:event_id>')
     @login_required
     def event_detail(event_id):
-        event = Event.query.options(joinedload(Event.student), joinedload(Event.files)).get_or_404(event_id)
+        event = db.session.query(Event).options(
+            joinedload(Event.student), joinedload(Event.files)
+        ).filter(Event.id == event_id).one_or_404()
+
         if current_user.role == 'student' and event.student_id != current_user.id:
             return "Доступ ограничен", 403
-        if current_user.role == 'curator' and event.student.group_name != current_user.group_name:
-            return "Доступ ограничен", 403
+        if current_user.role == 'curator':
+            curator_group_ids = [g.id for g in current_user.curated_groups]
+            if event.student.group_id not in curator_group_ids:
+                return "Доступ ограничен", 403
         if current_user.role not in ('student', 'curator', 'commission', 'admin'):
             return "Доступ ограничен", 403
+
         return render_template('event_detail.html', event=event)
 
     @app.route('/diplom/<path:filename>')
@@ -46,7 +50,7 @@ def register_api_routes(app):
     @app.route('/notifications/mark_read/<int:notif_id>', methods=['POST'])
     @login_required
     def mark_notification_read(notif_id):
-        notif = Notification.query.get_or_404(notif_id)
+        notif = db.get_or_404(Notification, notif_id)
         if notif.user_id != current_user.id:
             return "Доступ ограничен", 403
         notif.is_read = True
@@ -67,6 +71,33 @@ def register_api_routes(app):
         count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
         return jsonify({'unread': count})
 
+    @app.route('/api/notifications/stream')
+    @login_required
+    def api_notifications_stream():
+        uid = current_user.id
+        if not uid:
+            return jsonify({'error': 'Не авторизован'}), 401
+
+        def event_stream():
+            last_count = -1
+            with app.app_context():
+                try:
+                    while True:
+                        cnt = Notification.query.filter_by(
+                            user_id=uid, is_read=False
+                        ).count()
+                        if cnt != last_count:
+                            last_count = cnt
+                            yield f'data: {{"unread":{cnt}}}\n\n'
+                        import time
+                        time.sleep(3)
+                except GeneratorExit:
+                    pass
+        return Response(event_stream(), mimetype='text/event-stream',
+                        headers={'Cache-Control': 'no-cache',
+                                 'X-Accel-Buffering': 'no',
+                                 'Connection': 'keep-alive'})
+
     # ==================================================================
     #  API КУРАТОРА
     # ==================================================================
@@ -76,7 +107,8 @@ def register_api_routes(app):
         if current_user.role != 'curator':
             return jsonify({'error': 'Доступ ограничен'}), 403
 
-        group_students = User.query.filter_by(group_name=current_user.group_name, role='student').all()
+        group_ids = [g.id for g in current_user.curated_groups]
+        group_students = User.query.filter(User.role == 'student', User.group_id.in_(group_ids)).all()
         student_ids = [s.id for s in group_students]
         scope = request.args.get('scope', 'pending')
         q = request.args.get('q', '').strip()
@@ -89,7 +121,7 @@ def register_api_routes(app):
         else:
             query = Event.query.options(joinedload(Event.student)).filter(
                 Event.student_id.in_(student_ids),
-                Event.status == 'pending'
+                Event.status == EventStatus.PENDING
             )
 
         if q:
@@ -103,6 +135,7 @@ def register_api_routes(app):
                 'id': e.id,
                 'title': e.title,
                 'description': e.description or '',
+                'category': e.category,
                 'status': e.status,
                 'score': e.score,
                 'curator_comment': e.curator_comment or '',
@@ -134,6 +167,7 @@ def register_api_routes(app):
                 'id': e.id,
                 'title': e.title,
                 'description': e.description or '',
+                'category': e.category,
                 'status': e.status,
                 'score': e.score,
                 'curator_comment': e.curator_comment or '',
