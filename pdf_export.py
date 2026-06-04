@@ -2,28 +2,33 @@
 Генерация PDF-версии портфолио (через weasyprint).
 """
 import io
-from flask import render_template
-from weasyprint import HTML
-
+from database import SessionLocal
 from models import User, Event
+from template_setup import templates
+from fastapi import Request
 
 
 def generate_portfolio_pdf(username):
     """Возвращает BytesIO с PDF-портфолио студента."""
-    user = User.query.filter_by(username=username, role='student').first()
-    if not user:
-        return None
-
-    events = Event.query.filter_by(
-        student_id=user.id, status='approved'
-    ).order_by(Event.created_at.desc()).all()
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == username, User.role == 'student').first()
+        if not user: return None
+        events = db.query(Event).filter(
+            Event.student_id == user.id, Event.status == 'approved'
+        ).order_by(Event.created_at.desc()).all()
+    finally:
+        db.close()
 
     total_score = sum(e.score for e in events if e.score)
     avg = round(total_score / len(events), 2) if events else 0
 
-    html_str = render_template('portfolio.html', student=user,
-                                events=events, avg_score=avg)
+    html_str = templates.get_template('portfolio.html').render(
+        request={}, student=user, events=events, avg_score=avg,
+        current_user=None, flash=None
+    )
     buf = io.BytesIO()
+    from weasyprint import HTML
     HTML(string=html_str).write_pdf(buf)
     buf.seek(0)
     return buf

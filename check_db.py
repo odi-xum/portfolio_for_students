@@ -1,41 +1,42 @@
 """
-Проверка содержимого БД.
+Просмотр содержимого БД (для отладки).
 """
-from app import create_app
-from models import db, Department, Specialty, Group, User, Event, Notification, ScholarshipRequest
+from database import SessionLocal
+from models import Department, Specialty, Group, User, Event, AuditLog
 
-app = create_app()
 
-with app.app_context():
-    depts = Department.query.all()
-    print(f'=== Отделения ({len(depts)}) ===')
-    for d in depts:
-        specs_in = ', '.join([s.abbreviation for s in d.specialties])
-        print(f'  {d.name}: {specs_in}')
+def check_db():
+    db = SessionLocal()
+    try:
+        print('\n=== ОТДЕЛЕНИЯ ===')
+        for d in db.query(Department).all():
+            print(f'  #{d.id} {d.name}')
 
-    specs = Specialty.query.all()
-    print(f'\n=== Специальности ({len(specs)}) ===')
-    for s in specs:
-        dn = s.department_rel.name if s.department_rel else '—'
-        print(f'  [{s.abbreviation}] {s.name} — {s.code} → {dn}')
+        print('\n=== СПЕЦИАЛЬНОСТИ ===')
+        for s in db.query(Specialty).all():
+            dept = s.department_rel.name if s.department_rel else '—'
+            print(f'  #{s.id} {s.name} ({s.code}) — {dept}')
 
-    groups = Group.query.all()
-    print(f'\n=== Группы ({len(groups)}) ===')
-    for g in groups:
-        print(f'  {g.name} | №{g.group_number or "—"} | {g.specialty_name} ({g.specialty_code}) | {g.budget_type or "—"} | {g.start_year or "—"}')
+        print('\n=== ГРУППЫ ===')
+        for g in db.query(Group).all():
+            cur = g.curator.username if g.curator else '—'
+            print(f'  #{g.id} {g.name} — курс {g.course}, куратор {cur}')
 
-    print(f'\n=== Пользователи ===')
-    for u in User.query.all():
-        fio = ' '.join(filter(None, [u.last_name, u.first_name, u.patronymic]))
-        print(f'  [{u.role:12s}] {u.username:12s} | {fio or "—":30s} | гр: {u.group_name or "—"}')
+        print('\n=== ПОЛЬЗОВАТЕЛИ ===')
+        for u in db.query(User).order_by(User.role, User.username).all():
+            grp = u.group_name or '—'
+            print(f'  #{u.id} {u.username:20s} {u.role:10s} гр. {grp}')
 
-    print(f'\n=== Мероприятия: {Event.query.count()} ===')
-    print(f'  одобрено:   {Event.query.filter_by(status="approved").count()}')
-    print(f'  на проверке: {Event.query.filter_by(status="pending").count()}')
-    print(f'  в комиссии: {Event.query.filter_by(status="disputed").count()}')
-    print(f'  отклонено:  {Event.query.filter_by(status="rejected").count()}')
+        print('\n=== МЕРОПРИЯТИЯ ===')
+        for e in db.query(Event).order_by(Event.created_at.desc()).limit(20).all():
+            print(f'  #{e.id} ст.{e.student_id} {e.status:10s} {e.title[:50]}')
 
-    print(f'\n=== Уведомления: {Notification.query.count()} ===')
-    print(f'  непрочитанных: {Notification.query.filter_by(is_read=False).count()}')
+        print(f'\n=== АУДИТ-ЛОГ: {db.query(AuditLog).count()} записей ===')
+        for a in db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(10).all():
+            print(f'  #{a.id} {a.created_at} | {a.username} | {a.action} | {a.details or ""}')
+    finally:
+        db.close()
 
-    print(f'\n=== Заявки на стипендию: {ScholarshipRequest.query.count()} ===')
+
+if __name__ == '__main__':
+    check_db()

@@ -1,170 +1,168 @@
 """
-Модели данных системы портфолио студентов.
+Модели данных — SQLAlchemy 2.0 (без Flask-зависимостей).
 """
 from __future__ import annotations
-
-from datetime import datetime
-from typing import Optional
-
-from flask_login import UserMixin
-from flask_sqlalchemy import SQLAlchemy
-
-from constants import EventStatus, ScholarshipStatus, UserRole
-
-db = SQLAlchemy()
+from datetime import datetime, timezone
+from typing import Optional, List
+from sqlalchemy import (Column, Integer, String, Text, Boolean, Date, DateTime,
+                        ForeignKey, create_engine)
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from database import Base
 
 
-class User(db.Model, UserMixin):
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+# ── User ──────────────────────────────────────────────────────────────────
+class User(Base):
     __tablename__ = 'users'
 
-    id: int = db.Column(db.Integer, primary_key=True)
-    username: str = db.Column(db.String(50), unique=True, nullable=False)
-    password_hash: str = db.Column(db.String(256), nullable=False)
-    role: str = db.Column(db.String(20), nullable=False)
+    id:          Mapped[int]       = mapped_column(Integer, primary_key=True)
+    username:    Mapped[str]       = mapped_column(String(50), unique=True, nullable=False)
+    password_hash: Mapped[str]     = mapped_column(String(256), nullable=False)
+    role:        Mapped[str]       = mapped_column(String(20), nullable=False)
+    last_name:   Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    first_name:  Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    patronymic:  Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    group_name:  Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    group_id:    Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('groups.id'), nullable=True)
 
-    last_name: Optional[str] = db.Column(db.String(50), nullable=True)
-    first_name: Optional[str] = db.Column(db.String(50), nullable=True)
-    patronymic: Optional[str] = db.Column(db.String(50), nullable=True)
+    events        = relationship('Event', back_populates='student', lazy=True, cascade='all, delete-orphan')
+    notifications = relationship('Notification', back_populates='user', lazy=True, cascade='all, delete-orphan')
+    curated_groups = relationship('Group', foreign_keys='Group.curator_id', back_populates='curator', lazy='select')
 
-    group_name: Optional[str] = db.Column(db.String(20), nullable=True)
-    group_id: Optional[int] = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
-
-    events = db.relationship('Event', backref='student', lazy=True, cascade='all, delete-orphan')
-    notifications = db.relationship('Notification', backref='user', lazy=True, cascade='all, delete-orphan')
-    scholarship_requests = db.relationship('ScholarshipRequest', backref='student', lazy=True, cascade='all, delete-orphan')
-    curated_groups = db.relationship('Group', foreign_keys='Group.curator_id',
-                                     back_populates='curator', lazy='select')
-
-    def is_admin(self) -> bool: return self.role == UserRole.ADMIN
-    def is_student(self) -> bool: return self.role == UserRole.STUDENT
-    def is_curator(self) -> bool: return self.role == UserRole.CURATOR
-    def is_commission(self) -> bool: return self.role == UserRole.COMMISSION
+    def is_admin(self) -> bool:   return self.role == 'admin'
+    def is_student(self) -> bool: return self.role == 'student'
+    def is_curator(self) -> bool: return self.role == 'curator'
 
     @property
     def full_name(self) -> str:
         return ' '.join(filter(None, [self.last_name, self.first_name, self.patronymic])) or self.username
 
 
-class Event(db.Model):
+# ── Event ─────────────────────────────────────────────────────────────────
+class Event(Base):
     __tablename__ = 'events'
 
-    id: int = db.Column(db.Integer, primary_key=True)
-    student_id: int = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    title: str = db.Column(db.String(150), nullable=False)
-    description: Optional[str] = db.Column(db.Text, nullable=True)
-    status: str = db.Column(db.String(20), default=EventStatus.PENDING, nullable=False)
-    previous_status: Optional[str] = db.Column(db.String(20), nullable=True)
+    id:             Mapped[int]   = mapped_column(Integer, primary_key=True)
+    student_id:     Mapped[int]   = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    title:          Mapped[str]   = mapped_column(String(150), nullable=False)
+    description:    Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status:         Mapped[str]   = mapped_column(String(20), default='pending', nullable=False)
+    category:       Mapped[Optional[str]] = mapped_column(String(5), nullable=True)
+    score:          Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    curator_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at:     Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
-    category: Optional[str] = db.Column(db.String(5), nullable=True)
-    score: Optional[int] = db.Column(db.Integer, nullable=True)
-    curator_comment: Optional[str] = db.Column(db.Text, nullable=True)
-    commission_comment: Optional[str] = db.Column(db.Text, nullable=True)
-
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    commission_reviewed_at: Optional[datetime] = db.Column(db.DateTime, nullable=True)
-    files = db.relationship('EventFile', backref='event', lazy=True, cascade='all, delete-orphan')
+    student = relationship('User', back_populates='events')
+    files   = relationship('EventFile', back_populates='event', lazy=True, cascade='all, delete-orphan')
 
     @property
     def status_label(self) -> str:
-        return {'pending':'На проверке','approved':'Одобрено','rejected':'Отклонено','disputed':'В комиссии'}.get(self.status,self.status)
+        return {'pending': 'На проверке', 'approved': 'Одобрено',
+                'rejected': 'Отклонено', 'disputed': 'Отклонено'}.get(self.status, self.status)
 
     @property
-    def is_pending(self) -> bool: return self.status == EventStatus.PENDING
+    def is_pending(self) -> bool:   return self.status == 'pending'
     @property
-    def is_approved(self) -> bool: return self.status == EventStatus.APPROVED
+    def is_approved(self) -> bool:  return self.status == 'approved'
     @property
-    def is_resolved(self) -> bool: return self.status in (EventStatus.APPROVED, EventStatus.REJECTED, EventStatus.DISPUTED)
-
+    def is_resolved(self) -> bool:  return self.status in ('approved', 'rejected')
     @property
-    def category_label(self) -> str: return self.category if self.category else 'Без категории'
+    def is_rejected(self) -> bool:  return self.status == 'rejected'
+    @property
+    def category_label(self) -> str: return self.category or 'Без категории'
 
 
-class EventFile(db.Model):
+# ── EventFile ─────────────────────────────────────────────────────────────
+class EventFile(Base):
     __tablename__ = 'event_files'
-    id: int = db.Column(db.Integer, primary_key=True)
-    event_id: int = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    file_path: str = db.Column(db.String(300), nullable=False)
-    file_type: str = db.Column(db.String(10), nullable=False)
+    id:        Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id:  Mapped[int] = mapped_column(Integer, ForeignKey('events.id'), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(300), nullable=False)
+    file_type: Mapped[str] = mapped_column(String(10), nullable=False)
+
+    event = relationship('Event', back_populates='files')
 
     @property
-    def is_image(self) -> bool:
-        return self.file_type in ('png', 'jpg', 'jpeg')
+    def is_image(self) -> bool: return self.file_type in ('png', 'jpg', 'jpeg')
 
 
-class Notification(db.Model):
+# ── Notification ──────────────────────────────────────────────────────────
+class Notification(Base):
     __tablename__ = 'notifications'
-    id: int = db.Column(db.Integer, primary_key=True)
-    user_id: int = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    message: str = db.Column(db.Text, nullable=False)
-    link: Optional[str] = db.Column(db.String(300), nullable=True)
-    is_read: bool = db.Column(db.Boolean, default=False, nullable=False)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    id:         Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id:    Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    message:    Mapped[str] = mapped_column(Text, nullable=False)
+    link:       Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    is_read:    Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    user = relationship('User', back_populates='notifications')
 
 
-class Department(db.Model):
+# ── Department ────────────────────────────────────────────────────────────
+class Department(Base):
     __tablename__ = 'departments'
-    id: int = db.Column(db.Integer, primary_key=True)
-    name: str = db.Column(db.String(100), unique=True, nullable=False)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow)
-    specialties = db.relationship('Specialty', backref='department_rel', lazy=True)
+    id:         Mapped[int] = mapped_column(Integer, primary_key=True)
+    name:       Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    specialties = relationship('Specialty', back_populates='department_rel', lazy=True)
 
 
-class Specialty(db.Model):
+# ── Specialty ─────────────────────────────────────────────────────────────
+class Specialty(Base):
     __tablename__ = 'specialties'
-    id: int = db.Column(db.Integer, primary_key=True)
-    name: str = db.Column(db.String(200), unique=True, nullable=False)
-    code: str = db.Column(db.String(20), nullable=False)
-    abbreviation: str = db.Column(db.String(10), nullable=False)
-    department_id: Optional[int] = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow)
-    groups = db.relationship('Group', backref='specialty_rel', lazy=True)
+    id:            Mapped[int] = mapped_column(Integer, primary_key=True)
+    name:          Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    code:          Mapped[str] = mapped_column(String(20), nullable=False)
+    abbreviation:  Mapped[str] = mapped_column(String(10), nullable=False)
+    department_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('departments.id'), nullable=True)
+    created_at:    Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    department_rel = relationship('Department', back_populates='specialties')
+    groups         = relationship('Group', back_populates='specialty_rel', lazy=True)
 
 
-class Group(db.Model):
+# ── Group ─────────────────────────────────────────────────────────────────
+class Group(Base):
     __tablename__ = 'groups'
-    id: int = db.Column(db.Integer, primary_key=True)
-    name: str = db.Column(db.String(20), unique=True, nullable=False)
-    group_number: Optional[str] = db.Column(db.String(10), nullable=True)
-    specialty_id: Optional[int] = db.Column(db.Integer, db.ForeignKey('specialties.id'), nullable=True)
-    specialty_name: str = db.Column(db.String(200), nullable=False)
-    specialty_code: str = db.Column(db.String(20), nullable=False)
-    budget_type: Optional[str] = db.Column(db.String(10), nullable=True)
-    start_year: Optional[int] = db.Column(db.Integer, nullable=True)
-    course: int = db.Column(db.Integer, nullable=False)
-    department: Optional[str] = db.Column(db.String(100), nullable=True)
-    form_of_study: str = db.Column(db.String(50), default='очная')
-    start_date: Optional[datetime] = db.Column(db.Date, nullable=True)
-    end_date: Optional[datetime] = db.Column(db.Date, nullable=True)
-    curator_id: Optional[int] = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow)
-    curator = db.relationship('User', foreign_keys=[curator_id], back_populates='curated_groups', lazy=True)
+    id:             Mapped[int] = mapped_column(Integer, primary_key=True)
+    name:           Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    group_number:   Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    specialty_id:   Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('specialties.id'), nullable=True)
+    specialty_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    specialty_code: Mapped[str] = mapped_column(String(20), nullable=False)
+    budget_type:    Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    start_year:     Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    course:         Mapped[int] = mapped_column(Integer, nullable=False)
+    department:     Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    form_of_study:  Mapped[str] = mapped_column(String(50), default='очная')
+    start_date:     Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
+    end_date:       Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
+    curator_id:     Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at:     Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    specialty_rel = relationship('Specialty', back_populates='groups')
+    curator       = relationship('User', foreign_keys=[curator_id], back_populates='curated_groups', lazy=True)
 
 
-class ScholarshipRequest(db.Model):
-    __tablename__ = 'scholarship_requests'
-    id: int = db.Column(db.Integer, primary_key=True)
-    student_id: int = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status: str = db.Column(db.String(30), default=ScholarshipStatus.UNDER_CURATOR_REVIEW, nullable=False)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    commission_reviewed_at: Optional[datetime] = db.Column(db.DateTime, nullable=True)
-
-
-class AuditLog(db.Model):
+# ── AuditLog ──────────────────────────────────────────────────────────────
+class AuditLog(Base):
     __tablename__ = 'audit_log'
-    id: int = db.Column(db.Integer, primary_key=True)
-    user_id: int = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    username: str = db.Column(db.String(50), nullable=False)
-    action: str = db.Column(db.String(50), nullable=False)
-    details: Optional[str] = db.Column(db.Text, nullable=True)
-    ip_address: Optional[str] = db.Column(db.String(45), nullable=True)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    id:         Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id:    Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
+    username:   Mapped[str] = mapped_column(String(50), nullable=False)
+    action:     Mapped[str] = mapped_column(String(50), nullable=False)
+    details:    Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
 
-class CuratorOKOverride(db.Model):
-    """Отметка куратора о выполнении ОК студентом."""
+# ── CuratorOKOverride ─────────────────────────────────────────────────────
+class CuratorOKOverride(Base):
     __tablename__ = 'curator_ok_overrides'
-    id: int = db.Column(db.Integer, primary_key=True)
-    student_id: int = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    curator_id: int = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    ok_category: str = db.Column(db.String(5), nullable=False)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    id:          Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id:  Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    curator_id:  Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    ok_category: Mapped[str] = mapped_column(String(5), nullable=False)
+    created_at:  Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)

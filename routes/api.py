@@ -1,178 +1,192 @@
 """
-API-эндпоинты и маршруты уведомлений.
+API-эндпоинты и SSE — FastAPI.
 """
-from flask import render_template, request, redirect, url_for, flash, jsonify, Response
-from flask_login import login_required, current_user
-from sqlalchemy.orm import joinedload
+import time, json
+from fastapi import APIRouter, Request, Depends
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse, HTMLResponse
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
+from database import get_db
+from utils import render
+from dependencies import require_user, require_curator, get_current_user
+from helpers import BASE_UPLOAD_FOLDER
+from models import User, Event, Notification
 from constants import EventStatus
-from models import db, User, Event, Notification
+
+router = APIRouter()
 
 
-def register_api_routes(app):
 
-    @app.route('/event/<int:event_id>')
-    @login_required
-    def event_detail(event_id):
-        event = db.session.query(Event).options(
+
+
+@router.get('/event/{event_id}')
+async def event_detail(request: Request, event_id: int,
+                        user: User = Depends(require_user)):
+    db = next(get_db())
+    try:
+        event = db.query(Event).options(
             joinedload(Event.student), joinedload(Event.files)
-        ).filter(Event.id == event_id).one_or_404()
-
-        if current_user.role == 'student' and event.student_id != current_user.id:
-            return "Доступ ограничен", 403
-        if current_user.role == 'curator':
-            curator_group_ids = [g.id for g in current_user.curated_groups]
+        ).filter(Event.id == event_id).first()
+        if not event:
+            return HTMLResponse('', status_code=404)
+        if user.role == 'student' and event.student_id != user.id:
+            return HTMLResponse('Доступ ограничен', status_code=403)
+        if user.role == 'curator':
+            curator_group_ids = [g.id for g in user.curated_groups]
             if event.student.group_id not in curator_group_ids:
-                return "Доступ ограничен", 403
-        if current_user.role not in ('student', 'curator', 'commission', 'admin'):
-            return "Доступ ограничен", 403
+                return HTMLResponse('Доступ ограничен', status_code=403)
+        if user.role not in ('student', 'curator', 'admin'):
+            return HTMLResponse('Доступ ограничен', status_code=403)
+    finally:
+        db.close()
+    return render(request, 'event_detail.html', event=event)
 
-        return render_template('event_detail.html', event=event)
 
-    @app.route('/diplom/<path:filename>')
-    @login_required
-    def serve_diplom_files(filename):
-        from helpers import BASE_UPLOAD_FOLDER
-        from flask import send_from_directory
-        return send_from_directory(BASE_UPLOAD_FOLDER, filename)
+# ── Notifications ────────────────────────────────────────────────────
+@router.get('/notifications')
+async def notifications(request: Request, user: User = Depends(require_user)):
+    db = next(get_db())
+    try:
+        notifs = db.query(Notification).filter(
+            Notification.user_id == user.id
+        ).order_by(Notification.created_at.desc()).all()
+        unread = db.query(Notification).filter(
+            Notification.user_id == user.id, Notification.is_read == False
+        ).count()
+    finally:
+        db.close()
+    return render(request, 'notifications.html', notifications=notifs, unread_count=unread)
 
-    # ==================================================================
-    #  УВЕДОМЛЕНИЯ
-    # ==================================================================
-    @app.route('/notifications')
-    @login_required
-    def notifications():
-        notifs = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).all()
-        unread = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
-        return render_template('notifications.html', notifications=notifs, unread_count=unread)
 
-    @app.route('/notifications/mark_read/<int:notif_id>', methods=['POST'])
-    @login_required
-    def mark_notification_read(notif_id):
-        notif = db.get_or_404(Notification, notif_id)
-        if notif.user_id != current_user.id:
-            return "Доступ ограничен", 403
-        notif.is_read = True
-        db.session.commit()
-        return redirect(url_for('notifications'))
+@router.post('/notifications/mark_read/{notif_id}')
+async def mark_notification_read(request: Request, notif_id: int,
+                                  user: User = Depends(require_user)):
+    db = next(get_db())
+    try:
+        notif = db.get(Notification, notif_id)
+        if notif and notif.user_id == user.id:
+            notif.is_read = True
+            db.commit()
+    finally:
+        db.close()
+    return RedirectResponse(url='/notifications', status_code=302)
 
-    @app.route('/notifications/mark_all_read', methods=['POST'])
-    @login_required
-    def mark_all_notifications_read():
-        Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
-        db.session.commit()
-        flash('Все уведомления отмечены как прочитанные.', 'success')
-        return redirect(url_for('notifications'))
 
-    @app.route('/api/notifications/count')
-    @login_required
-    def api_notification_count():
-        count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
-        return jsonify({'unread': count})
+@router.post('/notifications/mark_all_read')
+async def mark_all_notifications_read(request: Request, user: User = Depends(require_user)):
+    db = next(get_db())
+    try:
+        db.query(Notification).filter(
+            Notification.user_id == user.id, Notification.is_read == False
+        ).update({'is_read': True})
+        db.commit()
+    finally:
+        db.close()
+    request.session['flash'] = {'type': 'success', 'message': 'Все уведомления отмечены как прочитанные.'}
+    return RedirectResponse(url='/notifications', status_code=302)
 
-    @app.route('/api/notifications/stream')
-    @login_required
-    def api_notifications_stream():
-        uid = current_user.id
-        if not uid:
-            return jsonify({'error': 'Не авторизован'}), 401
 
-        def event_stream():
-            last_count = -1
-            with app.app_context():
-                try:
-                    while True:
-                        cnt = Notification.query.filter_by(
-                            user_id=uid, is_read=False
-                        ).count()
-                        if cnt != last_count:
-                            last_count = cnt
-                            yield f'data: {{"unread":{cnt}}}\n\n'
-                        import time
-                        time.sleep(3)
-                except GeneratorExit:
-                    pass
-        return Response(event_stream(), mimetype='text/event-stream',
-                        headers={'Cache-Control': 'no-cache',
-                                 'X-Accel-Buffering': 'no',
-                                 'Connection': 'keep-alive'})
+@router.get('/api/notifications/count')
+async def api_notification_count(request: Request, user: User = Depends(require_user)):
+    db = next(get_db())
+    try:
+        count = db.query(Notification).filter(
+            Notification.user_id == user.id, Notification.is_read == False
+        ).count()
+    finally:
+        db.close()
+    return JSONResponse({'unread': count})
 
-    # ==================================================================
-    #  API КУРАТОРА
-    # ==================================================================
-    @app.route('/curator/api/events', methods=['GET'])
-    @login_required
-    def curator_api_events():
-        if current_user.role != 'curator':
-            return jsonify({'error': 'Доступ ограничен'}), 403
 
-        group_ids = [g.id for g in current_user.curated_groups]
-        group_students = User.query.filter(User.role == 'student', User.group_id.in_(group_ids)).all()
+@router.get('/api/notifications/stream')
+async def api_notifications_stream(request: Request, user: User = Depends(require_user)):
+    uid = user.id
+    async def event_stream():
+        last_count = -1
+        while True:
+            try:
+                db = next(get_db())
+                cnt = db.query(Notification).filter(
+                    Notification.user_id == uid, Notification.is_read == False
+                ).count()
+                db.close()
+                if cnt != last_count:
+                    last_count = cnt
+                    yield f'data: {{"unread":{cnt}}}\n\n'
+            except Exception:
+                pass
+            await time.sleep(3)
+    return StreamingResponse(event_stream(), media_type='text/event-stream',
+                             headers={'Cache-Control': 'no-cache',
+                                      'X-Accel-Buffering': 'no',
+                                      'Connection': 'keep-alive'})
+
+
+# ── Curator API ──────────────────────────────────────────────────────
+@router.get('/curator/api/events')
+async def curator_api_events(request: Request, user: User = Depends(require_curator),
+                              scope: str = 'pending', q: str = ''):
+    db = next(get_db())
+    try:
+        group_ids = [g.id for g in user.curated_groups]
+        group_students = db.query(User).filter(
+            User.role == 'student', User.group_id.in_(group_ids)
+        ).all()
         student_ids = [s.id for s in group_students]
-        scope = request.args.get('scope', 'pending')
-        q = request.args.get('q', '').strip()
 
         if scope == 'resolved':
-            query = Event.query.options(joinedload(Event.student)).filter(
+            query = db.query(Event).options(joinedload(Event.student)).filter(
                 Event.student_id.in_(student_ids),
-                Event.status.in_(['approved', 'disputed', 'rejected'])
+                Event.status.in_(['approved', 'rejected'])
             )
         else:
-            query = Event.query.options(joinedload(Event.student)).filter(
+            query = db.query(Event).options(joinedload(Event.student)).filter(
                 Event.student_id.in_(student_ids),
                 Event.status == EventStatus.PENDING
             )
-
         if q:
             like = f'%{q}%'
             query = query.filter(or_(Event.title.ilike(like), Event.description.ilike(like)))
-
         events = query.order_by(Event.created_at.desc()).all()
-        result = []
-        for e in events:
-            result.append({
-                'id': e.id,
-                'title': e.title,
-                'description': e.description or '',
-                'category': e.category,
-                'status': e.status,
-                'score': e.score,
-                'curator_comment': e.curator_comment or '',
-                'commission_comment': e.commission_comment or '',
-                'created_at': e.created_at.strftime('%d.%m.%Y %H:%M') if e.created_at else '',
-                'student': e.student.username if e.student else 'Удален'
-            })
-        return jsonify({'events': result, 'scope': scope})
+    finally:
+        db.close()
+    return JSONResponse({'events': [_ser_event(e) for e in events], 'scope': scope})
 
-    # ==================================================================
-    #  API СТУДЕНТА
-    # ==================================================================
-    @app.route('/student/api/events', methods=['GET'])
-    @login_required
-    def student_api_events():
-        if current_user.role != 'student':
-            return jsonify({'error': 'Доступ ограничен'}), 403
 
-        q = request.args.get('q', '').strip()
-        query = Event.query.options(joinedload(Event.files)).filter_by(student_id=current_user.id)
+# ── Student API ──────────────────────────────────────────────────────
+@router.get('/student/api/events')
+async def student_api_events(request: Request, user: User = Depends(require_user),
+                              q: str = ''):
+    db = next(get_db())
+    try:
+        query = db.query(Event).options(joinedload(Event.files)).filter(
+            Event.student_id == user.id
+        )
         if q:
             like = f'%{q}%'
             query = query.filter(or_(Event.title.ilike(like), Event.description.ilike(like)))
-
         events = query.order_by(Event.created_at.desc()).all()
-        result = []
-        for e in events:
-            result.append({
-                'id': e.id,
-                'title': e.title,
-                'description': e.description or '',
-                'category': e.category,
-                'status': e.status,
-                'score': e.score,
-                'curator_comment': e.curator_comment or '',
-                'commission_comment': e.commission_comment or '',
-                'created_at': e.created_at.strftime('%d.%m.%Y %H:%M') if e.created_at else '',
-                'files': [{'path': f.file_path, 'type': f.file_type} for f in e.files]
-            })
-        return jsonify({'events': result})
+    finally:
+        db.close()
+    return JSONResponse({'events': [_ser_event_student(e) for e in events]})
+
+
+def _ser_event(e):
+    return {
+        'id': e.id, 'title': e.title, 'description': e.description or '',
+        'category': e.category, 'status': e.status, 'score': e.score,
+        'curator_comment': e.curator_comment or '',
+        'created_at': e.created_at.strftime('%d.%m.%Y %H:%M') if e.created_at else '',
+        'student': e.student.username if e.student else 'Удален'
+    }
+
+
+def _ser_event_student(e):
+    return {
+        'id': e.id, 'title': e.title, 'description': e.description or '',
+        'category': e.category, 'status': e.status, 'score': e.score,
+        'curator_comment': e.curator_comment or '',
+        'created_at': e.created_at.strftime('%d.%m.%Y %H:%M') if e.created_at else '',
+        'files': [{'path': f.file_path, 'type': f.file_type} for f in e.files]
+    }

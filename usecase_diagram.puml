@@ -1,0 +1,90 @@
+@startuml
+left to right direction
+
+package "Студент + Куратор" {
+  actor Guest as "Гость"
+  actor Student as "Студент"
+  actor Curator as "Куратор"
+}
+
+usecase "Публичное портфолио" as G1
+usecase "Создать мероприятие" as S1
+usecase "Загрузить файлы" as S2
+usecase "Просмотреть историю" as S3
+usecase "Скачать портфолио" as S4
+usecase "Подать на стипендию" as S5
+usecase "Смотреть рейтинг" as S6
+usecase "Статистика ОК" as S7
+usecase "Редактировать профиль" as S8
+usecase "Просмотреть ожидающие" as C1
+usecase "Одобрить мероприятие" as C2
+usecase "Проставить баллы" as C3
+usecase "Отправить в комиссию" as C4
+usecase "Отметить ОК студента" as C5
+usecase "Смотреть рейтинг группы" as C6
+usecase "Экспорт отчёта" as C7
+usecase "Портфолио студента" as C8
+usecase "Рассмотреть спорные" as K1
+usecase "Подтвердить отказ" as K2
+usecase "Отменить отказ" as K3
+usecase "Вернуть на проверку" as K4
+usecase "Рассмотреть заявки" as K5
+usecase "Утвердить стипендию" as K6
+usecase "Отклонить стипендию" as K7
+usecase "Архив решённых" as K8
+usecase "Управлять пользователями" as A1
+usecase "Управлять группами" as A2
+usecase "Назначить куратора" as A3
+usecase "Импорт студентов" as A4
+usecase "Аудит-лог" as A5
+
+package "Комиссия + Админ" {
+  actor Commission as "Комиссия"
+  actor Admin as "Администратор"
+}
+
+Guest --> G1
+Student --> S1
+Student --> S2
+Student --> S3
+Student --> S4
+Student --> S5
+Student --> S6
+Student --> S7
+Student --> S8
+Curator --> C1
+Curator --> C2
+Curator --> C3
+Curator --> C4
+Curator --> C5
+Curator --> C6
+Curator --> C7
+Curator --> C8
+Commission --> K1
+Commission --> K2
+Commission --> K3
+Commission --> K4
+Commission --> K5
+Commission --> K6
+Commission --> K7
+Commission --> K8
+Admin --> A1
+Admin --> A2
+Admin --> A3
+Admin --> A4
+Admin --> A5
+
+S1 .> S2 : <<include>>
+C2 .> C3 : <<include>>
+
+C2 .> C1 : <<extend>>
+C4 .> C1 : <<extend>>
+K2 .> K1 : <<extend>>
+K3 .> K1 : <<extend>>
+K4 .> K1 : <<extend>>
+K6 .> K5 : <<extend>>
+K7 .> K5 : <<extend>>
+A3 .> A2 : <<extend>>
+A4 .> A1 : <<extend>>
+
+@enduml

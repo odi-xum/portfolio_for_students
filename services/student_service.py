@@ -1,37 +1,31 @@
 """
-Сервис студента: статистика, проверка стипендии.
+Сервис студента: статистика мероприятий.
 """
 from __future__ import annotations
-
-from typing import List, Optional
-
-from constants import EventStatus, SCHOLARSHIP_MIN_EVENTS, SCHOLARSHIP_MIN_AVG_SCORE
-from models import db, User, Event, ScholarshipRequest
+from typing import List
+from database import SessionLocal
+from constants import EventStatus
+from models import Event
 
 
 def get_student_event_stats(student_id: int) -> dict:
-    """Статистика мероприятий студента."""
-    base = Event.query.filter_by(student_id=student_id)
-    total = base.count()
-    approved = base.filter(Event.status == EventStatus.APPROVED).count()
-    pending = base.filter(Event.status == EventStatus.PENDING).count()
-    disputed = base.filter(Event.status == EventStatus.DISPUTED).count()
-    return {'total': total, 'approved': approved, 'pending': pending, 'disputed': disputed}
-
-
-def check_scholarship_eligibility(student_id: int) -> tuple:
-    """
-    Проверка возможности подать на стипендию.
-    Возвращает (eligible: bool, approved_count: int, avg_score: float).
-    """
-    approved = Event.query.filter_by(student_id=student_id, status=EventStatus.APPROVED).all()
-    count = len(approved)
-    if count < SCHOLARSHIP_MIN_EVENTS:
-        return False, count, 0.0
-    avg = sum(e.score for e in approved) / count
-    return avg >= SCHOLARSHIP_MIN_AVG_SCORE, count, avg
+    db = SessionLocal()
+    try:
+        base = db.query(Event).filter(Event.student_id == student_id)
+        total = base.count()
+        approved = base.filter(Event.status == EventStatus.APPROVED).count()
+        pending = base.filter(Event.status == EventStatus.PENDING).count()
+        rejected = base.filter(Event.status == EventStatus.REJECTED).count()
+        return {'total': total, 'approved': approved, 'pending': pending, 'rejected': rejected}
+    finally:
+        db.close()
 
 
 def get_student_approved_events(student_id: int) -> List[Event]:
-    """Одобренные мероприятия студента."""
-    return Event.query.filter_by(student_id=student_id, status=EventStatus.APPROVED).all()
+    db = SessionLocal()
+    try:
+        return db.query(Event).filter(
+            Event.student_id == student_id, Event.status == EventStatus.APPROVED
+        ).all()
+    finally:
+        db.close()

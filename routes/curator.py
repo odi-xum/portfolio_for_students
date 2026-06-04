@@ -1,195 +1,227 @@
 """
-Маршруты куратора: панель, заявки, журнал, оценка мероприятий.
+Куратор — FastAPI.
 """
-from flask import abort, render_template, request, redirect, url_for, flash, send_file
-from flask_login import login_required, current_user
+import io, os, zipfile
+from fastapi import APIRouter, Request, Form, Depends
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session, joinedload
 
+from database import get_db
+from utils import render
+from dependencies import require_curator
+from helpers import log_audit
+from models import User, Event
 from constants import EventStatus
-from models import db, User, Event
 from export import generate_report
 from services.curator_service import (
-    get_curator_dashboard_stats,
-    get_curator_students,
-    get_curator_events,
+    get_curator_dashboard_stats, get_curator_students, get_curator_events,
 )
-from services.notification_service import notify_user, notify_all_commission
-from helpers import log_audit
+from services.notification_service import notify_user
 from services.ok_service import get_ok_stats, toggle_override, OK_LIST
+from pdf_export import generate_portfolio_pdf
+
+router = APIRouter()
 
 
-def register_curator_routes(app):
+def _render(request, template, **ctx):
+    user = getattr(request.state, 'user', None)
+    flash = request.session.pop('flash', None)
+    return templates.TemplateResponse(template, {
+        'request': request, 'current_user': user, 'flash': flash, **ctx
+    })
 
-    @app.route('/curator/dashboard', methods=['GET'])
-    @login_required
-    def curator_dashboard():
-        if current_user.role != 'curator':
-            return "Доступ ограничен", 403
 
-        stats = get_curator_dashboard_stats(current_user)
-        groups = current_user.curated_groups
-        students = get_curator_students(current_user)
+@router.get('/curator/dashboard')
+async def curator_dashboard(request: Request, user: User = Depends(require_curator)):
+    stats = get_curator_dashboard_stats(user)
+    groups = user.curated_groups
+    students = get_curator_students(user)
+    return render(request, 'curator.html', pending_count=stats['pending'],
+                   approved_count=stats['approved'], rejected_count=stats['rejected'],
+                   total_resolved=stats['total_resolved'], groups=groups, students=students)
 
-        return render_template('curator.html',
-                               pending_count=stats['pending'],
-                               approved_count=stats['approved'],
-                               disputed_count=stats['disputed'],
-                               total_resolved=stats['total_resolved'],
-                               groups=groups,
-                               students=students)
 
-    @app.route('/curator/pending', methods=['GET'])
-    @login_required
-    def curator_pending():
-        if current_user.role != 'curator':
-            return "Доступ ограничен", 403
+@router.get('/curator/pending')
+async def curator_pending(request: Request, user: User = Depends(require_curator)):
+    events = get_curator_events(user, EventStatus.PENDING)
+    return render(request, 'curator_pending.html', events=events)
 
-        events = get_curator_events(current_user, EventStatus.PENDING)
-        return render_template('curator_pending.html', events=events)
 
-    @app.route('/curator/resolved', methods=['GET'])
-    @login_required
-    def curator_resolved():
-        if current_user.role != 'curator':
-            return "Доступ ограничен", 403
+@router.get('/curator/resolved')
+async def curator_resolved(request: Request, user: User = Depends(require_curator)):
+    events = get_curator_events(user, 'resolved')
+    return render(request, 'curator_resolved.html', events=events)
 
-        events = get_curator_events(current_user, 'resolved')
-        return render_template('curator_resolved.html', events=events)
 
-    @app.route('/curator/evaluate/<int:event_id>', methods=['POST'])
-    @login_required
-    def curator_evaluate(event_id):
-        if current_user.role != 'curator':
-            return "Доступ ограничен", 403
-
-        event = db.get_or_404(Event, event_id)
-        action = request.form.get('action')
-        comment = request.form.get('comment')
+@router.post('/curator/evaluate/{event_id}')
+async def curator_evaluate(request: Request, event_id: int,
+                            user: User = Depends(require_curator),
+                            action: str = Form(...), comment: str = Form(''),
+                            score: int = Form(5)):
+    db = next(get_db())
+    try:
+        event = db.get(Event, event_id)
+        if not event: return RedirectResponse(url='/curator/pending', status_code=302)
 
         if action == 'approve':
-            score = int(request.form.get('score', 5))
-            event.score = score
-            event.curator_comment = comment
+            event.score = score; event.curator_comment = comment or None
             event.status = EventStatus.APPROVED
             notify_user(event.student_id,
-                        f"Куратор одобрил ваше мероприятие «{event.title}» с оценкой {score}.",
-                        url_for('event_detail', event_id=event.id))
-            log_audit(current_user, 'event_approve', f'Одобрено мероприятие #{event.id} «{event.title}» студента {event.student_id}, оценка {score}')
-            flash(f"Мероприятие ID {event.id} успешно одобрено с оценкой {score}.", 'success')
+                f"Куратор одобрил ваше мероприятие «{event.title}» с оценкой {score}.",
+                f'/event/{event.id}')
+            log_audit(db, user, 'event_approve',
+                      f'Одобрено мероприятие #{event.id} «{event.title}», оценка {score}')
 
         elif action == 'reject':
-            if not comment or comment.strip() == "":
-                flash("Ошибка: При отклонении поста комментарий с указанием причины обязателен!", "danger")
-                return redirect(url_for('curator_pending'))
-
+            if not comment.strip():
+                request.session['flash'] = {'type': 'danger', 'message': 'При отклонении комментарий обязателен!'}
+                return RedirectResponse(url='/curator/pending', status_code=302)
             event.curator_comment = comment
-            event.status = EventStatus.DISPUTED
-
+            event.status = EventStatus.REJECTED
             notify_user(event.student_id,
-                        f"Куратор отклонил ваше мероприятие «{event.title}». Причина: {comment}",
-                        url_for('event_detail', event_id=event.id))
-            notify_all_commission(
-                f"Куратор отклонил пост студента «{event.title}». Требуется арбитражная оценка.",
-                url_for('event_detail', event_id=event.id))
-            log_audit(current_user, 'event_reject', f'Отклонено мероприятие #{event.id} «{event.title}» студента {event.student_id}')
-            flash(f"Мероприятие ID {event.id} отклонено и перенаправлено в комиссию.", 'warning')
+                f"Куратор отклонил ваше мероприятие «{event.title}». Причина: {comment}",
+                f'/event/{event.id}')
+            log_audit(db, user, 'event_reject',
+                      f'Отклонено мероприятие #{event.id} «{event.title}»')
 
-        db.session.commit()
-        return redirect(url_for('curator_pending'))
+        db.commit()
+    finally:
+        db.close()
+    return RedirectResponse(url='/curator/pending', status_code=302)
 
-    @app.route('/curator/export', methods=['GET', 'POST'])
-    @login_required
-    def curator_export():
-        if current_user.role != 'curator':
-            return "Доступ ограничен", 403
 
-        groups = current_user.curated_groups
+@router.get('/curator/export')
+async def curator_export_get(request: Request, user: User = Depends(require_curator)):
+    db = next(get_db())
+    try:
+        groups = user.curated_groups
         group_ids = [g.id for g in groups]
-        all_students = User.query.filter(
-            User.role == 'student',
-            User.group_id.in_(group_ids)
+        all_students = db.query(User).filter(
+            User.role == 'student', User.group_id.in_(group_ids)
+        ).order_by(User.last_name).all()
+    finally:
+        db.close()
+    return render(request, 'curator_export.html', students=all_students, groups=groups)
+
+
+@router.post('/curator/export')
+async def curator_export_post(request: Request, user: User = Depends(require_curator),
+                               student_ids: list[str] = Form(default=[]),
+                               group_id: str = Form(''), include_charts: bool = Form(False),
+                               include_details: bool = Form(False),
+                               status_filter: str = Form('all'),
+                               date_from: str = Form(''), date_to: str = Form('')):
+    db = next(get_db())
+    try:
+        groups = user.curated_groups
+        group_ids_list = [g.id for g in groups]
+        all_students = db.query(User).filter(
+            User.role == 'student', User.group_id.in_(group_ids_list)
         ).order_by(User.last_name).all()
 
-        if request.method == 'POST':
-            student_ids = request.form.getlist('student_ids')
-            selected_group_id = request.form.get('group_id')
-            base_students = all_students
-            if selected_group_id:
-                base_students = [s for s in all_students if str(s.group_id) == selected_group_id]
-            selected = [s for s in base_students if str(s.id) in student_ids] or base_students
-            include_charts = 'include_charts' in request.form
-            include_details = 'include_details' in request.form
-            status_filter = request.form.get('status_filter', 'all')
-            date_from = request.form.get('date_from') or None
-            date_to = request.form.get('date_to') or None
+        base_students = all_students
+        if group_id:
+            base_students = [s for s in all_students if str(s.group_id) == group_id]
+        selected = [s for s in base_students if str(s.id) in student_ids] or base_students
+    finally:
+        db.close()
 
-            buf = generate_report(
-                students=selected,
-                include_charts=include_charts,
-                include_details=include_details,
-                status_filter=status_filter,
-                date_from=date_from,
-                date_to=date_to,
-            )
-            group_label = selected_group_id or 'все_группы'
-            fname = f'отчёт_куратора_{group_label}.xlsx'
-            return send_file(buf, as_attachment=True, download_name=fname,
-                             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    buf = generate_report(
+        students=selected, include_charts=include_charts,
+        include_details=include_details, status_filter=status_filter,
+        date_from=date_from or None, date_to=date_to or None,
+    )
+    from fastapi.responses import StreamingResponse
+    group_label = group_id or 'все_группы'
+    return StreamingResponse(buf, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                             headers={'Content-Disposition': f'attachment; filename=отчёт_куратора_{group_label}.xlsx'})
 
-        return render_template('curator_export.html', students=all_students, groups=groups)
 
-    # ------------------------------------------------------------------
-    #  OK — просмотр компетенций студента
-    # ------------------------------------------------------------------
-    @app.route('/curator/student_ok/<int:student_id>', methods=['GET'])
-    @login_required
-    def curator_student_ok(student_id):
-        if current_user.role != 'curator':
-            abort(403)
+@router.post('/curator/portfolio_zip')
+async def curator_portfolio_zip(request: Request, user: User = Depends(require_curator),
+                                 student_ids: list[str] = Form(default=[])):
+    if not student_ids:
+        request.session['flash'] = {'type': 'warning', 'message': 'Не выбрано ни одного студента.'}
+        return RedirectResponse(url='/curator/export', status_code=302)
 
-        student = db.get_or_404(User, student_id)
-        if student.role != 'student':
-            abort(404)
+    db = next(get_db())
+    try:
+        group_ids = [g.id for g in user.curated_groups]
+        students = db.query(User).filter(
+            User.id.in_([int(sid) for sid in student_ids]),
+            User.role == 'student', User.group_id.in_(group_ids)
+        ).all()
+    finally:
+        db.close()
 
-        # Проверяем, что студент из группы куратора
-        curator_gids = [g.id for g in current_user.curated_groups]
+    if not students:
+        request.session['flash'] = {'type': 'warning', 'message': 'Студенты не найдены.'}
+        return RedirectResponse(url='/curator/export', status_code=302)
+
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for student in students:
+            pdf_buf = generate_portfolio_pdf(student.username)
+            if pdf_buf is None: continue
+            safe_name = student.username.replace('/', '_').replace('\\', '_')
+            zf.writestr(f'портфолио_{safe_name}.pdf', pdf_buf.getvalue())
+    zip_buf.seek(0)
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(zip_buf, media_type='application/zip',
+                             headers={'Content-Disposition': 'attachment; filename=портфолио_студентов.zip'})
+
+
+# ── OK — просмотр компетенций студента ───────────────────────────────
+@router.get('/curator/student_ok/{student_id}')
+async def curator_student_ok(request: Request, student_id: int,
+                              user: User = Depends(require_curator)):
+    db = next(get_db())
+    try:
+        student = db.get(User, student_id)
+        if not student or student.role != 'student':
+            return RedirectResponse(url='/curator/dashboard', status_code=302)
+        curator_gids = [g.id for g in user.curated_groups]
         if student.group_id not in curator_gids:
-            abort(403)
+            return RedirectResponse(url='/curator/dashboard', status_code=302)
 
         ok_stats = get_ok_stats(student_id)
-        current_category = request.args.get('category')
+        current_category = request.query_params.get('category')
 
         if current_category == 'none':
-            events = Event.query.filter(
+            events = db.query(Event).filter(
                 Event.student_id == student_id, Event.category.is_(None)
             ).order_by(Event.created_at.desc()).all()
         elif current_category:
-            events = Event.query.filter_by(
+            events = db.query(Event).filter_by(
                 student_id=student_id, category=current_category
             ).order_by(Event.created_at.desc()).all()
         else:
-            events = Event.query.filter_by(student_id=student_id).order_by(
+            events = db.query(Event).filter_by(student_id=student_id).order_by(
                 Event.created_at.desc()
             ).all()
+    finally:
+        db.close()
 
-        return render_template('curator_student_ok.html',
-                               student=student, ok_stats=ok_stats,
-                               ok_list=OK_LIST,
-                               current_category=current_category,
-                               events=events)
+    return render(request, 'curator_student_ok.html', student=student,
+                   ok_stats=ok_stats, ok_list=OK_LIST,
+                   current_category=current_category, events=events)
 
-    @app.route('/curator/toggle_ok/<int:student_id>/<ok_category>', methods=['POST'])
-    @login_required
-    def curator_toggle_ok(student_id, ok_category):
-        if current_user.role != 'curator':
-            abort(403)
 
-        if ok_category not in OK_LIST:
-            flash(f'Некорректная категория: {ok_category}', 'danger')
-            return redirect(url_for('curator_dashboard'))
-
-        added = toggle_override(student_id, current_user.id, ok_category)
-        label = 'засчитана' if added else 'отменена'
-        log_audit(current_user, f'ok_{"override" if added else "undo"}',
+@router.post('/curator/toggle_ok/{student_id}/{ok_category}')
+async def curator_toggle_ok(request: Request, student_id: int, ok_category: str,
+                             user: User = Depends(require_curator)):
+    if ok_category not in OK_LIST:
+        request.session['flash'] = {'type': 'danger', 'message': f'Некорректная категория: {ok_category}'}
+        return RedirectResponse(url='/curator/dashboard', status_code=302)
+    added = toggle_override(student_id, user.id, ok_category)
+    label = 'засчитана' if added else 'отменена'
+    db = next(get_db())
+    try:
+        log_audit(db, user, f'ok_{"override" if added else "undo"}',
                   f'{label.capitalize()} {ok_category} для студента #{student_id}')
-        flash(f'Категория {ok_category} {label} для студента.', 'success' if added else 'warning')
-        return redirect(url_for('curator_student_ok', student_id=student_id))
+    finally:
+        db.close()
+    request.session['flash'] = {'type': 'success' if added else 'warning',
+                                 'message': f'Категория {ok_category} {label} для студента.'}
+    return RedirectResponse(url=f'/curator/student_ok/{student_id}', status_code=302)

@@ -57,7 +57,6 @@
                     <option value="all">Все статусы</option>
                     <option value="approved">Только одобренные</option>
                     <option value="pending">Только на проверке</option>
-                    <option value="disputed">Только в комиссии</option>
                     <option value="rejected">Только отклонённые</option>
                 </select>
             </div>
@@ -93,6 +92,38 @@
     </form>
 </div>
 
+<!-- Пакетное скачивание портфолио -->
+<div class="form-card" style="margin-top: 1.5rem; border-left: 4px solid var(--green);">
+    <h3 style="margin-bottom: 1.5rem; color: var(--green); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
+        📦 Пакетное скачивание портфолио
+    </h3>
+    <form action="{{ url_for('curator_portfolio_zip') }}" method="POST">
+        <div style="margin-bottom: 1.5rem;">
+            <label style="color: var(--fg0); font-weight: bold; display: block; margin-bottom: 0.5rem;">
+                Выберите студентов для скачивания
+            </label>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; background: var(--bg2); color: var(--fg1); cursor: pointer;" onclick="toggleZipAll(true)">Выбрать всех</button>
+                <button type="button" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; background: var(--bg2); color: var(--fg1); cursor: pointer;" onclick="toggleZipAll(false)">Снять всех</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.4rem; max-height: 240px; overflow-y: auto; padding: 0.5rem; background: var(--bg1); border-radius: 4px;">
+                {% for s in students %}
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; color: var(--fg1);">
+                    <input type="checkbox" name="student_ids" value="{{ s.id }}"
+                           style="accent-color: var(--green);">
+                    {{ s.last_name or '' }} {{ s.first_name or '' }} ({{ s.username }})
+                </label>
+                {% else %}
+                <p style="color: var(--gray);">Нет студентов в группе.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success" style="font-size: 1.05rem; padding: 0.6rem 1.5rem;">
+            📦 Скачать портфолио (ZIP)
+        </button>
+    </form>
+</div>
+
 <!-- Подсказка -->
 <div class="form-card" style="margin-top: 1.5rem;">
     <details>
@@ -101,6 +132,7 @@
             <p><strong>Лист «Сводка»</strong> — статистика по каждому студенту: количество мероприятий по статусам, средний балл. Строки с баллом ≥4.5 подсвечены.</p>
             <p><strong>Лист «Мероприятия»</strong> — полный список мероприятий с деталями (если включено).</p>
             <p><strong>Лист «Графики»</strong> — круговая диаграмма распределения статусов и столбчатая диаграмма среднего балла (если включено).</p>
+            <p><strong>Портфолио (ZIP)</strong> — PDF-версии портфолио выбранных студентов в одном архиве.</p>
         </div>
     </details>
 </div>
@@ -108,6 +140,11 @@
 <script>
 function toggleAll(checked) {
     document.querySelectorAll('input[name="student_ids"]').forEach(function(cb) {
+        cb.checked = checked;
+    });
+}
+function toggleZipAll(checked) {
+    document.querySelectorAll('.form-card form[action$="portfolio_zip"] input[name="student_ids"]').forEach(function(cb) {
         cb.checked = checked;
     });
 }

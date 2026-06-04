@@ -9,8 +9,8 @@
         <div>
             <h2 class="welcome-title">Добро пожаловать, {% if current_user.last_name or current_user.first_name %}{{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}{% else %}{{ current_user.username }}{% endif %}</h2>
             <p class="welcome-text">
-                Добро пожаловать в систему портфолио! Здесь вы можете публиковать свои достижения,
-                отслеживать их статус проверки и подавать заявки на повышенную стипендию.
+                Добро пожаловать в систему портфолио! Здесь вы можете публиковать свои достижения
+                и отслеживать их статус проверки.
             </p>
         </div>
     </div>
@@ -33,9 +33,9 @@
         <div class="stat-value c-yellow">{{ pending }}</div>
     </div>
     <div class="form-card stat-card">
-        <div class="stat-icon">⚖️</div>
-        <div class="stat-label">В комиссии</div>
-        <div class="stat-value c-orange">{{ disputed }}</div>
+        <div class="stat-icon">❌</div>
+        <div class="stat-label">Отклонено</div>
+        <div class="stat-value c-orange">{{ rejected }}</div>
     </div>
 </div>
 
@@ -60,7 +60,7 @@
         <div class="action-icon">🏆</div>
         <div>
             <h3>Рейтинг</h3>
-            <p>Сводная таблица с баллами и прогрессом до стипендии</p>
+            <p>Сводная таблица с баллами группы</p>
         </div>
     </a>
 
@@ -100,24 +100,6 @@
         </button>
     </form>
     {% endif %}
-</div>
-{% endif %}
-
-{% if can_request %}
-<div class="form-card" style="border-left: 4px solid var(--yellow); margin-bottom: 2rem;">
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <strong style="color: var(--fg0); font-size: 1.05rem;">Выполнены нормативы портфолио!</strong>
-            <p style="color: var(--fg1); margin: 0.25rem 0 0 0; font-size: 0.9rem;">
-                {{ approved }} одобренных постов, средний балл достаточен. Вы можете подать заявку на повышенную стипендию.
-            </p>
-        </div>
-        <form action="{{ url_for('request_scholarship') }}" method="POST" style="margin: 0;">
-            <button type="submit" class="btn btn-warning" style="box-shadow: 0 4px 6px rgba(0,0,0,0.2); white-space: nowrap;">
-                Подать на повышенную стипендию
-            </button>
-        </form>
-    </div>
 </div>
 {% endif %}
 

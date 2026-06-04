@@ -23,8 +23,7 @@
                 <th>ФИО</th>
                 <th style="width: 80px;">Всего</th>
                 <th style="width: 90px;">Одобрено</th>
-                <th style="width: 100px;">Средний балл</th>
-                <th style="width: 120px;">Статус</th>
+                <th style="width: 120px;">Средний балл</th>
             </tr>
         </thead>
         <tbody>
@@ -46,20 +45,9 @@
                 <td style="text-align: center;">{{ r.total }}</td>
                 <td style="text-align: center;">{{ r.approved }}</td>
                 <td style="text-align: center; font-weight: bold; color: var(--green);">{{ '%.2f'|format(r.avg_score) }}</td>
-                <td style="text-align: center;">
-                    {% if r.can_scholarship %}
-                    <span style="color: var(--green); font-weight: bold;">🎓 Стипендия</span>
-                    {% elif r.approved >= 20 %}
-                    <span style="color: var(--yellow);">Балл ниже 4.5</span>
-                    {% elif r.approved >= 15 %}
-                    <span style="color: var(--blue);">{{ 20 - r.approved }} до стипендии</span>
-                    {% else %}
-                    <span style="color: var(--gray);">{{ 20 - r.approved }} до стипендии</span>
-                    {% endif %}
-                </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" style="text-align: center; color: var(--gray);">Нет студентов в группе.</td></tr>
+            <tr><td colspan="5" style="text-align: center; color: var(--gray);">Нет студентов в группе.</td></tr>
             {% endfor %}
         </tbody>
     </table>

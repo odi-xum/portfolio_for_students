@@ -10,25 +10,14 @@ class UserRole(StrEnum):
     ADMIN = 'admin'
     STUDENT = 'student'
     CURATOR = 'curator'
-    COMMISSION = 'commission'
 
 
 # ── Статусы мероприятий (Event) ────────────────────────────────────────────
 
 class EventStatus(StrEnum):
     PENDING = 'pending'      # отправлено студентом, ждёт куратора
-    APPROVED = 'approved'    # одобрено
-    REJECTED = 'rejected'    # окончательно отклонено комиссией
-    DISPUTED = 'disputed'    # отклонено куратором → передано в комиссию
-
-
-# ── Статусы заявок на стипендию ────────────────────────────────────────────
-
-class ScholarshipStatus(StrEnum):
-    UNDER_CURATOR_REVIEW = 'under_curator_review'
-    UNDER_COMMISSION_REVIEW = 'under_commission_review'
-    APPROVED = 'approved'
-    REJECTED = 'rejected'
+    APPROVED = 'approved'    # одобрено куратором
+    REJECTED = 'rejected'    # отклонено куратором
 
 
 # ── Загрузка файлов ────────────────────────────────────────────────────────
@@ -43,10 +32,8 @@ ALLOWED_MIME_TYPES = {
 }
 
 
-# ── Лимиты для стипендии ───────────────────────────────────────────────────
+# ── Оценки ─────────────────────────────────────────────────────────────────
 
-SCHOLARSHIP_MIN_EVENTS = 20
-SCHOLARSHIP_MIN_AVG_SCORE = 4.5
 MAX_EVENT_SCORE = 5
 MIN_EVENT_SCORE = 1
 

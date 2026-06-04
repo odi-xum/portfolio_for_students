@@ -1,33 +1,53 @@
 """
-Маршруты аутентификации: логин / логаут.
+Аутентификация: логин / логаут (FastAPI).
 """
-from flask import render_template, request, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash
-from models import User
+from fastapi import APIRouter, Request, Form, Depends
+from fastapi.responses import RedirectResponse, HTMLResponse
+from sqlalchemy.orm import Session
+
+from database import get_db
+from utils import render
+from dependencies import create_access_token, verify_password, require_user
 from helpers import log_audit
+from models import User
+
+router = APIRouter()
 
 
-def register_auth_routes(app):
-    @app.route('/', methods=['GET', 'POST'])
-    def login():
-        if current_user.is_authenticated:
-            return redirect(url_for(f'{current_user.role}_dashboard'))
-        if request.method == 'POST':
-            username = request.form.get('username')
-            password = request.form.get('password')
-            user = User.query.filter_by(username=username).first()
-            if user and check_password_hash(user.password_hash, password):
-                login_user(user)
-                log_audit(user, 'login', f'Вход в систему')
-                return redirect(url_for(f'{user.role}_dashboard'))
-            log_audit(username, 'login_failed', f'Неудачная попытка входа')
-            flash('Неверный логин или пароль. Попробуйте еще раз.', 'danger')
-        return render_template('login.html')
+@router.get('/')
+async def login_page(request: Request):
+    user = getattr(request.state, 'user', None)
+    if user:
+        return RedirectResponse(url=f'/{user.role}/dashboard', status_code=302)
+    return render(request, 'login.html')
 
-    @app.route('/logout')
-    @login_required
-    def logout():
-        log_audit(current_user, 'logout', 'Выход из системы')
-        logout_user()
-        return redirect(url_for('login'))
+
+@router.post('/')
+async def login_submit(request: Request, username: str = Form(...), password: str = Form(...),
+                       db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if user and verify_password(password, user.password_hash):
+        token = create_access_token({'sub': str(user.id)})
+        ip = request.client.host if request.client else None
+        log_audit(db, user, 'login', 'Вход в систему', ip)
+        response = RedirectResponse(url=f'/{user.role}/dashboard', status_code=302)
+        response.set_cookie(key='access_token', value=token, httponly=True,
+                            samesite='lax', max_age=28800)
+        return response
+    ip = request.client.host if request.client else None
+    log_audit(db, username, 'login_failed', 'Неудачная попытка входа', ip)
+    request.session['flash'] = {'type': 'danger', 'message': 'Неверный логин или пароль. Попробуйте еще раз.'}
+    return render(request, 'login.html')
+
+
+@router.get('/logout')
+async def logout(request: Request, user: User = Depends(require_user)):
+    db = next(get_db())
+    try:
+        ip = request.client.host if request.client else None
+        log_audit(db, user, 'logout', 'Выход из системы', ip)
+    finally:
+        db.close()
+    response = RedirectResponse(url='/', status_code=302)
+    response.delete_cookie('access_token')
+    return response

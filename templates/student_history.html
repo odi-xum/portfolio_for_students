@@ -49,7 +49,7 @@
                 {% if event.status == 'pending' %}На проверке
                 {% elif event.status == 'approved' %}Одобрено
                 {% elif event.status == 'rejected' %}Отклонено
-                {% elif event.status == 'disputed' %}В комиссии
+                {% elif event.status == 'disputed' %}Отклонено
                 {% else %}{{ event.status }}{% endif %}
             </span>
         </div>
@@ -160,7 +160,7 @@
             }).join('');
 
             let feedbackHtml = '';
-            if (e.score || e.curator_comment || e.commission_comment) {
+            if (e.score || e.curator_comment) {
                 feedbackHtml = '<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--bg2); font-size: 0.95rem;">';
                 if (e.score) {
                     feedbackHtml += '<p style="color: var(--green); margin-bottom: 0.25rem;"><strong>Оценка:</strong> ' + e.score + ' / 5</p>';
@@ -168,9 +168,7 @@
                 if (e.curator_comment) {
                     feedbackHtml += '<p style="color: var(--fg1); margin-bottom: 0.25rem; font-style: italic;"><strong>Комментарий куратора:</strong> ' + e.curator_comment + '</p>';
                 }
-                if (e.commission_comment) {
-                    feedbackHtml += '<p style="color: var(--orange); margin-bottom: 0.25rem; font-style: italic;"><strong>Решение комиссии:</strong> ' + e.commission_comment + '</p>';
-                }
+
                 feedbackHtml += '</div>';
             }
 

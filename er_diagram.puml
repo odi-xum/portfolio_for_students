@@ -1,0 +1,81 @@
+@startuml
+!define table(x) class x << (T,#FFEEEE) >>
+
+table(Department) {
+  + id: int
+  + name: string
+}
+
+table(Specialty) {
+  + id: int
+  + code: string
+  + abbreviation: string
+  + name: string
+  + department_id: int
+}
+
+table(Group) {
+  + id: int
+  + name: string
+  + course: int
+  + curator_id: int
+  + specialty_id: int
+}
+
+table(User) {
+  + id: int
+  + username: string
+  + role: string
+  + last_name: string
+  + first_name: string
+  + group_id: int
+}
+
+table(Event) {
+  + id: int
+  + student_id: int
+  + title: string
+  + status: string
+  + category: string
+  + score: int
+}
+
+table(EventFile) {
+  + id: int
+  + event_id: int
+  + file_path: string
+  + file_type: string
+}
+
+table(Notification) {
+  + id: int
+  + user_id: int
+  + message: text
+  + is_read: bool
+}
+
+table(ScholarshipRequest) {
+  + id: int
+  + student_id: int
+  + status: string
+}
+
+table(CuratorOKOverride) {
+  + id: int
+  + student_id: int
+  + curator_id: int
+  + ok_category: string
+}
+
+Department ||--o{ Specialty
+Specialty ||--o{ Group
+Group ||--o{ User : "студенты"
+User ||--o{ Group : "курирует"
+User ||--o{ Event
+Event ||--o{ EventFile
+User ||--o{ Notification
+User ||--o{ ScholarshipRequest
+User ||--o{ CuratorOKOverride : "оценка"
+User ||--o{ CuratorOKOverride : "оценивающий"
+
+@enduml

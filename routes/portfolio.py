@@ -1,21 +1,33 @@
 """
-Публичное портфолио студента.
-Доступно без аутентификации по /portfolio/<username>.
+Публичное портфолио (без аутентификации) — FastAPI.
 """
-from flask import render_template, abort
+from fastapi import APIRouter, Request, Depends
+from sqlalchemy.orm import Session
+
+from database import get_db
+from utils import render
 from models import User, Event
 
+router = APIRouter()
 
-def register_portfolio_routes(app):
-    @app.route('/portfolio/<username>')
-    def public_portfolio(username):
-        user = User.query.filter_by(username=username, role='student').first()
+
+@router.get('/portfolio/{username}')
+async def public_portfolio(request: Request, username: str):
+    db = next(get_db())
+    try:
+        user = db.query(User).filter(
+            User.username == username, User.role == 'student'
+        ).first()
         if not user:
-            abort(404)
-        events = Event.query.filter_by(
-            student_id=user.id, status='approved'
+            from fastapi.responses import HTMLResponse
+            return HTMLResponse('', status_code=404)
+        events = db.query(Event).filter(
+            Event.student_id == user.id, Event.status == 'approved'
         ).order_by(Event.created_at.desc()).all()
-        total_score = sum(e.score for e in events if e.score)
-        avg = round(total_score / len(events), 2) if events else 0
-        return render_template('portfolio.html', student=user,
-                               events=events, avg_score=avg)
+    finally:
+        db.close()
+
+    total_score = sum(e.score for e in events if e.score)
+    avg = round(total_score / len(events), 2) if events else 0
+
+    return render(request, 'portfolio.html', student=user, events=events, avg_score=avg)
