@@ -12,7 +12,6 @@
         {% if event.status == 'pending' %}На проверке
         {% elif event.status == 'approved' %}Одобрено
         {% elif event.status == 'rejected' %}Отклонено
-        {% elif event.status == 'disputed' %}Отклонено
         {% else %}{{ event.status }}{% endif %}
     </span>
 </div>

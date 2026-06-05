@@ -74,8 +74,6 @@ async def student_create_post(request: Request, user: User = Depends(require_stu
             db.add(EventFile(event_id=new_event.id, file_path=file_path, file_type=ext))
 
         if user.group_id:
-            from fastapi import Request
-            from template_setup import templates
             notify_curators_of_group(user.group_id,
                 f"Студент {user.username} опубликовал новое мероприятие: '{title}'. Требуется проверка.",
                 f'/event/{new_event.id}')

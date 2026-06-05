@@ -3,7 +3,7 @@
 """
 import io, os, zipfile
 from fastapi import APIRouter, Request, Form, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
@@ -21,14 +21,6 @@ from services.ok_service import get_ok_stats, toggle_override, OK_LIST
 from pdf_export import generate_portfolio_pdf
 
 router = APIRouter()
-
-
-def _render(request, template, **ctx):
-    user = getattr(request.state, 'user', None)
-    flash = request.session.pop('flash', None)
-    return templates.TemplateResponse(template, {
-        'request': request, 'current_user': user, 'flash': flash, **ctx
-    })
 
 
 @router.get('/curator/dashboard')
@@ -123,18 +115,22 @@ async def curator_export_post(request: Request, user: User = Depends(require_cur
         if group_id:
             base_students = [s for s in all_students if str(s.group_id) == group_id]
         selected = [s for s in base_students if str(s.id) in student_ids] or base_students
+
+        buf = generate_report(
+            db, students=selected, include_charts=include_charts,
+            include_details=include_details, status_filter=status_filter,
+            date_from=date_from or None, date_to=date_to or None,
+        )
     finally:
         db.close()
 
-    buf = generate_report(
-        students=selected, include_charts=include_charts,
-        include_details=include_details, status_filter=status_filter,
-        date_from=date_from or None, date_to=date_to or None,
+    group_label = group_id or 'vse_gruppy'
+    filename = f'otchet_kuratora_{group_label}.xlsx'
+    return StreamingResponse(
+        buf,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename={filename}'},
     )
-    from fastapi.responses import StreamingResponse
-    group_label = group_id or 'все_группы'
-    return StreamingResponse(buf, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                             headers={'Content-Disposition': f'attachment; filename=отчёт_куратора_{group_label}.xlsx'})
 
 
 @router.post('/curator/portfolio_zip')
@@ -164,12 +160,14 @@ async def curator_portfolio_zip(request: Request, user: User = Depends(require_c
             pdf_buf = generate_portfolio_pdf(student.username)
             if pdf_buf is None: continue
             safe_name = student.username.replace('/', '_').replace('\\', '_')
-            zf.writestr(f'портфолио_{safe_name}.pdf', pdf_buf.getvalue())
+            zf.writestr(f'portfolio_{safe_name}.pdf', pdf_buf.getvalue())
     zip_buf.seek(0)
 
-    from fastapi.responses import StreamingResponse
-    return StreamingResponse(zip_buf, media_type='application/zip',
-                             headers={'Content-Disposition': 'attachment; filename=портфолио_студентов.zip'})
+    return StreamingResponse(
+        zip_buf,
+        media_type='application/zip',
+        headers={'Content-Disposition': 'attachment; filename=student_portfolios.zip'},
+    )
 
 
 # ── OK — просмотр компетенций студента ───────────────────────────────

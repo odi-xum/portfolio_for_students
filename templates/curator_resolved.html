@@ -41,7 +41,6 @@
                     <th>Балл</th>
                     <th>Статус</th>
                     <th>Ваш комментарий</th>
-                    <th>Вердикт комиссии</th>
                 </tr>
             </thead>
             <tbody id="events-tbody">
@@ -55,8 +54,6 @@
                     <td>
                         {% if event.status == 'approved' %}
                             <span style="color: var(--green); font-weight: bold;">✔ Одобрен</span>
-                        {% elif event.status == 'disputed' %}
-                            <span style="color: var(--yellow); font-style: italic;">⏳ В комиссии</span>
                         {% elif event.status == 'rejected' %}
                             <span style="color: var(--red);">❌ Отклонен</span>
                         {% else %}
@@ -66,13 +63,11 @@
                     <td style="font-style: italic; color: var(--gray); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         {{ event.curator_comment or '—' }}
                     </td>
-                    <td style="font-style: italic; color: var(--purple); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        {{ event.commission_comment or '—' }}
-                    </td>
+
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8" style="text-align: center; color: var(--gray);">Нет вынесенных решений.</td>
+                    <td colspan="7" style="text-align: center; color: var(--gray);">Нет вынесенных решений.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -100,7 +95,6 @@
 
         var statusHtml = {
             'approved': '<span style="color: var(--green); font-weight: bold;">✔ Одобрен</span>',
-            'disputed': '<span style="color: var(--yellow); font-style: italic;">⏳ В комиссии</span>',
             'rejected': '<span style="color: var(--red);">❌ Отклонен</span>'
         };
 
@@ -108,7 +102,6 @@
             var st = statusHtml[e.status] || '<span style="color: var(--gray);">' + e.status + '</span>';
             var score = e.score ? '<span style="color: var(--aqua); font-weight: bold;">' + e.score + '</span>' : '—';
             var comment = e.curator_comment || '—';
-            var commComm = e.commission_comment || '—';
             return '<tr>' +
                 '<td>' + e.id + '</td>' +
                 '<td style="font-weight: bold; color: var(--fg0);">' + e.student + '</td>' +
@@ -117,7 +110,6 @@
                 '<td style="text-align: center;">' + score + '</td>' +
                 '<td>' + st + '</td>' +
                 '<td style="font-style: italic; color: var(--gray); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + comment + '</td>' +
-                '<td style="font-style: italic; color: var(--purple); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + commComm + '</td>' +
                 '</tr>';
         }).join('');
     }

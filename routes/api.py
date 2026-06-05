@@ -1,7 +1,7 @@
 """
 API-эндпоинты и SSE — FastAPI.
 """
-import time, json
+import asyncio, json
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse, HTMLResponse
 from sqlalchemy.orm import Session, joinedload
@@ -116,7 +116,7 @@ async def api_notifications_stream(request: Request, user: User = Depends(requir
                     yield f'data: {{"unread":{cnt}}}\n\n'
             except Exception:
                 pass
-            await time.sleep(3)
+            await asyncio.sleep(3)
     return StreamingResponse(event_stream(), media_type='text/event-stream',
                              headers={'Cache-Control': 'no-cache',
                                       'X-Accel-Buffering': 'no',

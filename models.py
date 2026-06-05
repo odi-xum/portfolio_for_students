@@ -61,7 +61,7 @@ class Event(Base):
     @property
     def status_label(self) -> str:
         return {'pending': 'На проверке', 'approved': 'Одобрено',
-                'rejected': 'Отклонено', 'disputed': 'Отклонено'}.get(self.status, self.status)
+                'rejected': 'Отклонено'}.get(self.status, self.status)
 
     @property
     def is_pending(self) -> bool:   return self.status == 'pending'

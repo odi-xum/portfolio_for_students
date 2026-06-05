@@ -2,10 +2,10 @@
 Генерация PDF-версии портфолио (через weasyprint).
 """
 import io
+from sqlalchemy.orm import joinedload
 from database import SessionLocal
 from models import User, Event
-from template_setup import templates
-from fastapi import Request
+from utils import templates
 
 
 def generate_portfolio_pdf(username):
@@ -13,8 +13,11 @@ def generate_portfolio_pdf(username):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username, User.role == 'student').first()
-        if not user: return None
-        events = db.query(Event).filter(
+        if not user:
+            return None
+        events = db.query(Event).options(
+            joinedload(Event.files)
+        ).filter(
             Event.student_id == user.id, Event.status == 'approved'
         ).order_by(Event.created_at.desc()).all()
     finally:

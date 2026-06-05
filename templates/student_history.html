@@ -49,7 +49,6 @@
                 {% if event.status == 'pending' %}На проверке
                 {% elif event.status == 'approved' %}Одобрено
                 {% elif event.status == 'rejected' %}Отклонено
-                {% elif event.status == 'disputed' %}Отклонено
                 {% else %}{{ event.status }}{% endif %}
             </span>
         </div>
@@ -80,7 +79,7 @@
         </div>
 
         <!-- Обратная связь -->
-        {% if event.score or event.curator_comment or event.commission_comment %}
+        {% if event.score or event.curator_comment %}
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--bg2); font-size: 0.95rem;">
             {% if event.score %}
                 <p style="color: var(--green); margin-bottom: 0.25rem;">
@@ -92,11 +91,7 @@
                     <strong>Комментарий куратора:</strong> {{ event.curator_comment }}
                 </p>
             {% endif %}
-            {% if event.commission_comment %}
-                <p style="color: var(--orange); margin-bottom: 0.25rem; font-style: italic;">
-                    <strong>Решение комиссии:</strong> {{ event.commission_comment }}
-                </p>
-            {% endif %}
+
         </div>
         {% endif %}
 
@@ -135,8 +130,7 @@
         const statusLabels = {
             'pending': 'На проверке',
             'approved': 'Одобрено',
-            'rejected': 'Отклонено',
-            'disputed': 'В комиссии'
+            'rejected': 'Отклонено'
         };
 
         eventsContainer.innerHTML = events.map(function(e) {
