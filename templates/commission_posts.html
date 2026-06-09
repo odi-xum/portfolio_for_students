@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Все посты — Комиссия{% endblock %}
+
+{% block content %}
+<h1 class="page-title">📋 Все мероприятия</h1>
+<p class="page-subtitle">Просмотр и управление оценками всех студентов.</p>
+
+<div class="card">
+    <form method="get" class="filter-bar">
+        <div class="form-group">
+            <label class="form-label">Статус</label>
+            <select name="status" class="form-select">
+                <option value="all" {% if current_status == 'all' %}selected{% endif %}>Все</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>На проверке</option>
+                <option value="approved" {% if current_status == 'approved' %}selected{% endif %}>Одобрено</option>
+                <option value="rejected" {% if current_status == 'rejected' %}selected{% endif %}>Отклонено</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Группа</label>
+            <select name="group_id" class="form-select"><option value="">Все группы</option>
+                {% for g in groups %}<option value="{{ g.id }}" {% if current_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 180px;">
+            <label class="form-label">Поиск</label>
+            <input type="text" name="search" value="{{ current_search }}" class="form-input" placeholder="Название мероприятия...">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍 Найти</button>
+    </form>
+</div>
+
+{% if events %}
+<div class="post-list">
+    {% for event in events %}
+    <div class="post-card status-{% if event.is_pending %}pending{% elif event.is_approved %}approved{% else %}rejected{% endif %}">
+        <div class="post-card-header">
+            <div style="flex: 1;">
+                <h3 class="post-card-title">{{ event.title }}</h3>
+                <div class="post-card-meta">
+                    <span>{{ event.student.full_name }} ({{ event.student.username }})</span>
+                    <span>{{ event.student.group_name or 'Без группы' }}</span>
+                    <span>{{ event.category_label }}</span>
+                    <span>{{ event.created_at.strftime('%d.%m.%Y') }}</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                <span class="badge badge-{% if event.is_pending %}warning{% elif event.is_approved %}approved{% else %}rejected{% endif %}">{{ event.status_label }}</span>
+                {% if event.score %}<span class="badge badge-blue">⭐ {{ event.score }}</span>{% endif %}
+            </div>
+        </div>
+        {% if event.description %}<div class="post-card-body">{{ event.description[:200] }}{% if event.description|length > 200 %}...{% endif %}</div>{% endif %}
+        {% if event.files %}
+        <div class="post-card-files">
+            {% for f in event.files %}
+            {% if f.is_image %}<img src="/{{ f.file_path }}" class="post-thumb" onclick="openLightbox('/{{ f.file_path }}')">
+            {% else %}<a href="/{{ f.file_path }}" target="_blank" class="file-pill">📄 PDF</a>{% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--bg3);">
+            <form method="post" action="{{ url_for('commission_change_score', event_id=event.id) }}" class="form-row" style="align-items: flex-end;">
+                <div class="form-group" style="flex: 0 0 auto;">
+                    <label class="form-label">Оценка (1-5)</label>
+                    <div class="score-input-group"><input type="number" name="score" value="{{ event.score or 1 }}" min="1" max="5" class="form-input"></div>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 150px;">
+                    <label class="form-label">Комментарий</label>
+                    <input type="text" name="comment" value="{{ event.curator_comment or '' }}" class="form-input" placeholder="Комментарий...">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">💾 Сохранить</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><div class="empty-icon">📭</div><p>Мероприятий не найдено.</p></div>
+{% endif %}
+{% endblock %}

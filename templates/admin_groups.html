@@ -1,81 +1,156 @@
 {% extends 'base.html' %}
-
-{% block title %}Управление группами — ИС Портфолио{% endblock %}
+{% block title %}Управление группами — Портфолио{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <h1 style="color: var(--orange); margin: 0;">🏛️ Управление группами</h1>
-    <a href="{{ url_for('admin_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← На панель</a>
+<div class="flex-between mb-3">
+    <div><h1 class="page-title">🏛️ Управление группами</h1><p class="page-subtitle">Отделения, специальности и учебные группы.</p></div>
 </div>
 
-<!-- =========================================================================
-     БЛОК 1: ОТДЕЛЕНИЯ И СПЕЦИАЛЬНОСТИ
-     ========================================================================= -->
-<div class="form-card" style="margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 1.5rem; color: var(--purple); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-        📚 Отделения и специальности
-    </h3>
-
-    <!-- Форма добавления специальности -->
-    <form method="POST" action="/admin/add_specialty" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1rem;">
-        <div class="form-group" style="margin: 0; min-width: 160px;">
-            <label for="add_dept_id">Отделение</label>
-            <select id="add_dept_id" name="department_id" class="form-control" required>
+<!-- Специальности -->
+<div class="card">
+    <h3 class="card-title">📚 Отделения и специальности</h3>
+    <form method="POST" action="/admin/add_specialty" class="form-row" style="margin-bottom: 1rem;">
+        <div class="form-group">
+            <label class="form-label" for="add_dept_id">Отделение</label>
+            <select id="add_dept_id" name="department_id" class="form-select" required>
                 <option value="">— Выберите —</option>
-                {% for d in departments %}
-                <option value="{{ d.id }}">{{ d.name }}</option>
-                {% endfor %}
+                {% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
             </select>
         </div>
-        <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
-            <label for="specialty_name">Название специальности</label>
-            <input type="text" id="specialty_name" name="specialty_name" class="form-control" required
-                   placeholder="Информационные системы и программирование"
-                   oninput="updatePreviewSpecialty(this.value)">
+        <div class="form-group">
+            <label class="form-label" for="specialty_name">Название специальности</label>
+            <input type="text" id="specialty_name" name="specialty_name" class="form-input" required placeholder="Информационные системы и программирование" oninput="updatePreviewSpecialty(this.value)">
         </div>
-        <div class="form-group" style="margin: 0; min-width: 100px;">
-            <label for="specialty_code">Код</label>
-            <input type="text" id="specialty_code" name="specialty_code" class="form-control" required
-                   placeholder="09.02.07">
+        <div class="form-group">
+            <label class="form-label" for="specialty_code">Код</label>
+            <input type="text" id="specialty_code" name="specialty_code" class="form-input" required placeholder="09.02.07">
         </div>
-        <div style="margin: 0;">
-            <div style="color: var(--gray); font-size: 0.85rem; margin-bottom: 0.25rem;">Сокращение</div>
-            <div id="spec-preview" style="font-family: monospace; font-weight: bold; color: var(--green); padding: 0.5rem 0.75rem; background: var(--bg2); border-radius: 4px; min-width: 60px; text-align: center;">
-                ???
-            </div>
+        <div class="form-group" style="min-width: 80px;">
+            <span class="form-label">Сокращение</span>
+            <div id="spec-preview" style="font-family: monospace; font-weight: bold; color: var(--success); padding: 0.5rem 0.75rem; background: var(--bg2); border-radius: var(--radius); text-align: center;">???</div>
         </div>
-        <button type="submit" class="btn btn-success" style="padding: 0.5rem 1rem;">Добавить</button>
+        <button type="submit" class="btn btn-success" style="align-self: flex-end; margin-bottom: 1.125rem;">Добавить</button>
     </form>
 
     {% if specialties %}
-    <div class="table-responsive">
+    <div class="table-wrap">
         <table>
-            <thead>
-                <tr>
-                    <th>Сокр.</th>
-                    <th>Название специальности</th>
-                    <th>Код</th>
-                    <th>Отделение</th>
-                    <th style="text-align: right;">Действия</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Сокр.</th><th>Название специальности</th><th>Код</th><th>Отделение</th><th style="text-align: right;">Действия</th></tr></thead>
             <tbody>
                 {% for s in specialties %}
                 <tr>
-                    <td><span style="font-family: monospace; font-weight: bold; color: var(--green);">{{ s.abbreviation }}</span></td>
-                    <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ s.name }}</td>
-                    <td><span style="font-family: monospace;">{{ s.code }}</span></td>
-                    <td>
-                        {% if s.department_rel %}
-                        <span style="color: var(--blue);">{{ s.department_rel.name }}</span>
-                        {% else %}
-                        <span style="color: var(--gray);">—</span>
-                        {% endif %}
-                    </td>
+                    <td><span style="font-family: monospace; font-weight: bold; color: var(--success);">{{ s.abbreviation }}</span></td>
+                    <td>{{ s.name }}</td>
+                    <td class="text-muted">{{ s.code }}</td>
+                    <td>{{ s.department_rel.name if s.department_rel else '—' }}</td>
                     <td style="text-align: right;">
-                        <form action="/admin/delete_specialty/{{ s.id }}" method="POST" style="display: inline;"
-                              onsubmit="return confirm('Удалить специальность «{{ s.name }}»?');">
-                            <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">Удалить</button>
+                        <form action="/admin/delete_specialty/{{ s.id }}" method="POST" style="display:inline;" onsubmit="return confirm('Удалить специальность {{ s.abbreviation }}?')">
+                            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Создание группы -->
+<div class="card">
+    <h3 class="card-title">➕ Создать новую группу</h3>
+    <form method="POST" action="{{ url_for('admin_create_group') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="create_specialty_id">Специальность *</label>
+                <select id="create_specialty_id" name="specialty_id" class="form-select" required onchange="updateGroupPreview()">
+                    <option value="">— Выберите —</option>
+                    {% for s in specialties %}
+                    <option value="{{ s.id }}" data-dept="{{ s.department_rel.name if s.department_rel else '' }}" data-abbr="{{ s.abbreviation }}">{{ s.abbreviation }} — {{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="budget_type">Бюджет</label>
+                <select id="budget_type" name="budget_type" class="form-select" onchange="updateGroupPreview()">
+                    <option value="">— Не указано —</option>
+                    <option value="бюджет">Бюджет</option>
+                    <option value="коммерция">Коммерция</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="start_year">Год начала</label>
+                <input type="number" id="start_year" name="start_year" class="form-input" placeholder="2022" min="2000" max="2099" oninput="updateGroupPreview()">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="group_number">Номер группы</label>
+                <input type="text" id="group_number" name="group_number" class="form-input" placeholder="232 / 232а" oninput="updateGroupPreview()">
+                <span class="text-muted">Внутренний номер (необязательно)</span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="course">Курс *</label>
+                <select id="course" name="course" class="form-select" required>
+                    <option value="1">1 курс</option><option value="2">2 курс</option><option value="3">3 курс</option><option value="4" selected>4 курс</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="department">Отделение</label>
+                <input type="text" id="department" name="department" class="form-input" placeholder="ИТ-отделение" readonly>
+                <span class="text-muted">Заполняется автоматически</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="form_of_study">Форма обучения</label>
+                <select id="form_of_study" name="form_of_study" class="form-select">
+                    <option value="очная">Очная</option><option value="заочная">Заочная</option><option value="очно-заочная">Очно-заочная</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="curator_id">Куратор группы</label>
+                <select id="curator_id" name="curator_id" class="form-select">
+                    <option value="">— Не назначен —</option>
+                    {% for c in curators %}<option value="{{ c.id }}">{{ c.last_name or c.username }} {{ c.first_name or '' }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="start_date">Начало обучения</label>
+                <input type="date" id="start_date" name="start_date" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="end_date">Окончание обучения</label>
+                <input type="date" id="end_date" name="end_date" class="form-input">
+            </div>
+        </div>
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg2); border-radius: var(--radius);">
+            <span class="text-muted">Имя группы: </span>
+            <strong id="group-preview" style="color: var(--blue); font-family: monospace;">???</strong>
+        </div>
+        <button type="submit" class="btn btn-primary">➕ Создать группу</button>
+    </form>
+</div>
+
+<!-- Список групп -->
+<div class="card">
+    <h3 class="card-title">📋 Список групп</h3>
+    {% if groups %}
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Группа</th><th>Специальность</th><th>Курс</th><th>Бюджет</th><th>Куратор</th><th style="text-align: right;">Действия</th></tr></thead>
+            <tbody>
+                {% for g in groups %}
+                <tr>
+                    <td><strong style="font-family: monospace;">{{ g.name }}</strong></td>
+                    <td>{{ g.specialty_name }} <span class="text-muted">({{ g.specialty_code }})</span></td>
+                    <td class="text-center">{{ g.course }}</td>
+                    <td><span class="badge {% if g.budget_type == 'бюджет' %}badge-success{% else %}badge-pending{% endif %}">{{ g.budget_type or '—' }}</span></td>
+                    <td>{{ g.curator.last_name or g.curator.username if g.curator else '—' }}</td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('admin_edit_group', group_id=g.id) }}" class="btn btn-ghost btn-sm">✏️</a>
+                        <form action="{{ url_for('admin_delete_group', group_id=g.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Удалить группу {{ g.name }}?')">
+                            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
                         </form>
                     </td>
                 </tr>
@@ -84,339 +159,23 @@
         </table>
     </div>
     {% else %}
-    <p style="color: var(--gray);">Специальности ещё не добавлены. Создайте хотя бы одну, чтобы добавлять группы.</p>
+    <div class="empty-state"><div class="empty-icon">🏛️</div><p>Группы ещё не созданы.</p></div>
     {% endif %}
 </div>
 
-<!-- =========================================================================
-     БЛОК 2: СОЗДАНИЕ ГРУППЫ
-     ========================================================================= -->
-<div class="form-card">
-    <h3 style="margin-bottom: 1.5rem; color: var(--blue); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-        Создать учебную группу
-    </h3>
-
-    {% if not specialties %}
-    <div class="alert alert-danger">Сначала добавьте хотя бы одну специальность в справочник выше.</div>
-    {% else %}
-    <form method="POST" action="/admin/add_group">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-
-            <!-- Отделение → фильтрует специальности -->
-            <div class="form-group" style="margin: 0;">
-                <label for="department_filter">Отделение</label>
-                <select id="department_filter" class="form-control" onchange="filterSpecialties()">
-                    <option value="">— Все отделения —</option>
-                    {% for d in departments %}
-                    <option value="{{ d.id }}">{{ d.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- Специальность (фильтруется по отделению) -->
-            <div class="form-group" style="margin: 0;">
-                <label for="specialty_id">Специальность *</label>
-                <select id="specialty_id" name="specialty_id" class="form-control" required onchange="updateDepartmentField(); updateGroupPreview();">
-                    <option value="">— Выберите специальность —</option>
-                    {% for s in specialties %}
-                    <option value="{{ s.id }}" data-abbr="{{ s.abbreviation }}" data-dept="{{ s.department_id }}">
-                        {{ s.abbreviation }} — {{ s.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- Тип обучения -->
-            <div class="form-group" style="margin: 0;">
-                <label for="budget_type">Тип обучения</label>
-                <select id="budget_type" name="budget_type" class="form-control" onchange="updateGroupPreview()">
-                    <option value="">— Не указано —</option>
-                    <option value="бюджет">Бюджет</option>
-                    <option value="коммерция">Коммерция</option>
-                </select>
-            </div>
-
-            <!-- Год начала -->
-            <div class="form-group" style="margin: 0;">
-                <label for="start_year">Год начала обучения</label>
-                <input type="number" id="start_year" name="start_year" class="form-control"
-                       placeholder="2022" min="2000" max="2099"
-                       oninput="updateGroupPreview()">
-            </div>
-
-            <!-- Номер группы -->
-            <div class="form-group" style="margin: 0;">
-                <label for="group_number">Номер группы</label>
-                <input type="text" id="group_number" name="group_number" class="form-control"
-                       placeholder="232 / 232а" oninput="updateGroupPreview()">
-                <small style="color: var(--gray);">Внутренний номер (необязательно)</small>
-            </div>
-
-            <div class="form-group" style="margin: 0;">
-                <label for="course">Курс *</label>
-                <select id="course" name="course" class="form-control" required>
-                    <option value="1">1 курс</option>
-                    <option value="2">2 курс</option>
-                    <option value="3">3 курс</option>
-                    <option value="4" selected>4 курс</option>
-                </select>
-            </div>
-
-            <div class="form-group" style="margin: 0;">
-                <label for="department">Отделение</label>
-                <input type="text" id="department" name="department" class="form-control" placeholder="ИТ-отделение" readonly>
-                <small style="color: var(--gray);">Заполняется автоматически</small>
-            </div>
-
-            <div class="form-group" style="margin: 0;">
-                <label for="form_of_study">Форма обучения</label>
-                <select id="form_of_study" name="form_of_study" class="form-control">
-                    <option value="очная">Очная</option>
-                    <option value="заочная">Заочная</option>
-                    <option value="очно-заочная">Очно-заочная</option>
-                </select>
-            </div>
-
-            <div class="form-group" style="margin: 0;">
-                <label for="curator_id">Куратор группы</label>
-                <select id="curator_id" name="curator_id" class="form-control">
-                    <option value="">— Не назначен —</option>
-                    {% for c in curators %}
-                    <option value="{{ c.id }}">{{ c.last_name or c.username }} {{ c.first_name or '' }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group" style="margin: 0;">
-                <label for="start_date">Начало обучения</label>
-                <input type="date" id="start_date" name="start_date" class="form-control">
-            </div>
-
-            <div class="form-group" style="margin: 0;">
-                <label for="end_date">Окончание обучения</label>
-                <input type="date" id="end_date" name="end_date" class="form-control">
-            </div>
-
-        </div>
-
-        <!-- Предпросмотр названия группы -->
-        <div id="group-preview-area" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--bg2); border-radius: 6px; border-left: 3px solid var(--green);">
-            <div style="color: var(--gray); font-size: 0.85rem; margin-bottom: 0.5rem;">
-                Предпросмотр группы:
-            </div>
-            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                <span id="group-preview" style="font-family: monospace; font-weight: bold; color: var(--green); font-size: 1.25rem;">—</span>
-                <span id="group-number-preview" style="font-family: monospace; color: var(--gray); font-size: 1rem;">
-                    № —
-                </span>
-            </div>
-        </div>
-
-        <button type="submit" class="btn btn-success">Создать группу</button>
-    </form>
-    {% endif %}
-</div>
-
-<!-- =========================================================================
-     БЛОК 3: ТАБЛИЦА ГРУПП
-     ========================================================================= -->
-<h2 style="margin-bottom: 1rem; margin-top: 2rem; color: var(--fg1);">Существующие группы</h2>
-<div class="table-responsive">
-    <table>
-        <thead>
-            <tr>
-                <th>Название</th>
-                <th>№</th>
-                <th>Специальность</th>
-                <th>Код</th>
-                <th>Тип</th>
-                <th>Год</th>
-                <th>Курс</th>
-                <th>Отделение</th>
-                <th>Форма</th>
-                <th>Куратор</th>
-                <th style="text-align: right;">Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for g in groups %}
-            <tr>
-                <td style="font-weight: bold; color: var(--fg0);">{{ g.name }}</td>
-                <td>
-                    {% if g.group_number %}
-                    <span style="color: var(--gray); font-family: monospace;">{{ g.group_number }}</span>
-                    {% else %}
-                    <span style="color: var(--bg3);">—</span>
-                    {% endif %}
-                </td>
-                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ g.specialty_name }}</td>
-                <td><span style="font-family: monospace;">{{ g.specialty_code }}</span></td>
-                <td>
-                    {% if g.budget_type == 'бюджет' %}
-                    <span style="color: var(--green); font-weight: bold;">Б</span>
-                    {% elif g.budget_type == 'коммерция' %}
-                    <span style="color: var(--orange); font-weight: bold;">К</span>
-                    {% else %}
-                    <span style="color: var(--gray);">—</span>
-                    {% endif %}
-                </td>
-                <td>{{ g.start_year if g.start_year else '—' }}</td>
-                <td style="text-align: center;">{{ g.course }}</td>
-                <td>{{ g.department or '—' }}</td>
-                <td>{{ g.form_of_study }}</td>
-                <td>
-                    {% if g.curator %}
-                    <span style="color: var(--blue);">{{ g.curator.last_name or g.curator.username }} {{ g.curator.first_name or '' }}</span>
-                    {% else %}
-                    <span style="color: var(--gray);">—</span>
-                    {% endif %}
-                </td>
-                <td style="text-align: right; white-space: nowrap;">
-                    <a href="{{ url_for('admin_edit_group', group_id=g.id) }}" class="btn"
-                       style="padding: 0.25rem 0.75rem; font-size: 0.85rem; background-color: var(--blue); color: #fff; text-decoration: none; display: inline-block;">✏️</a>
-                    <form action="/admin/delete_group/{{ g.id }}" method="POST" style="display: inline;"
-                          onsubmit="return confirm('Удалить группу {{ g.name }}?');">
-                        <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">🗑</button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="11" style="text-align: center; color: var(--gray);">Группы не созданы.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- Справочник: соответствие специальностей отделениям (для JS) -->
-<script id="specialty-dept-data" type="application/json">
-{
-  {% for s in specialties %}
-  "{{ s.id }}": {{ s.department_id if s.department_id else 'null' }}{% if not loop.last %},{% endif %}
-  {% endfor %}
-}
-</script>
-{% endblock %}
-
-{% block scripts %}
 <script>
-// =====================================================================
-// Генерация сокращения
-// =====================================================================
-function generateAbbreviation(name) {
-    var skip = new Set(['и', 'в', 'на', 'с', 'по', 'из', 'для', 'у', 'о', 'от', 'к', 'до',
-                        'без', 'над', 'под', 'за', 'при', 'об', 'со', 'во', 'не', 'ни', 'а', 'но']);
-    var letters = [];
-    var parts = name.split(/\s+/);
-    for (var i = 0; i < parts.length; i++) {
-        var w = parts[i].toLowerCase().replace(/[()]/g, '');
-        if (w && !skip.has(w)) {
-            letters.push(parts[i][0].toUpperCase());
-        }
-    }
-    return letters.join('');
-}
-
-function updatePreviewSpecialty(name) {
-    var el = document.getElementById('spec-preview');
-    if (name.trim()) {
-        el.textContent = generateAbbreviation(name);
-    } else {
-        el.textContent = '???';
-    }
-}
-
-// =====================================================================
-// Фильтрация специальностей по отделению
-// =====================================================================
-var specialtyDeptMap = {};
-(function() {
-    var script = document.getElementById('specialty-dept-data');
-    if (script) {
-        specialtyDeptMap = JSON.parse(script.textContent);
-    }
-})();
-
-function filterSpecialties() {
-    var deptId = document.getElementById('department_filter').value;
-    var select = document.getElementById('specialty_id');
-    var options = select.options;
-    var selectedVal = select.value;
-
-    for (var i = 0; i < options.length; i++) {
-        var opt = options[i];
-        if (!opt.value) continue;
-        var optDept = specialtyDeptMap[opt.value];
-        opt.style.display = (!deptId || optDept == deptId) ? '' : 'none';
-    }
-
-    var stillVisible = false;
-    for (var i = 0; i < options.length; i++) {
-        if (options[i].value === selectedVal && options[i].style.display !== 'none') {
-            stillVisible = true;
-            break;
-        }
-    }
-    if (!stillVisible) select.value = '';
-
-    updateDepartmentField();
-    updateGroupPreview();
-}
-
-function updateDepartmentField() {
-    var select = document.getElementById('specialty_id');
-    var deptField = document.getElementById('department');
-    var deptFilter = document.getElementById('department_filter');
-
-    if (!select.value) {
-        deptField.value = '';
-        return;
-    }
-
-    var optDeptId = specialtyDeptMap[select.value];
-    var filterOpts = deptFilter.options;
-    var deptName = '';
-    for (var i = 0; i < filterOpts.length; i++) {
-        if (filterOpts[i].value == optDeptId) {
-            deptName = filterOpts[i].text;
-            break;
-        }
-    }
-    deptField.value = deptName;
-}
-
-// =====================================================================
-// Предпросмотр названия и номера группы
-// =====================================================================
+function updatePreviewSpecialty(val) { document.getElementById('spec-preview').textContent = val ? val.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,6) : '???'; }
 function updateGroupPreview() {
-    var specialtySelect = document.getElementById('specialty_id');
-    var budgetSelect = document.getElementById('budget_type');
-    var yearInput = document.getElementById('start_year');
-    var numInput = document.getElementById('group_number');
-    var previewArea = document.getElementById('group-preview-area');
-    var previewEl = document.getElementById('group-preview');
-    var numPreviewEl = document.getElementById('group-number-preview');
-
-    var opt = specialtySelect.options[specialtySelect.selectedIndex];
-    var abbr = opt ? opt.dataset.abbr || '' : '';
-    var budgetVal = budgetSelect.value;
-    var yearVal = yearInput.value;
-    var numVal = numInput.value;
-
-    if (!abbr) {
-        previewArea.style.display = 'none';
-        return;
-    }
-
-    var parts = [abbr];
-    if (budgetVal === 'бюджет') parts.push('Б');
-    else if (budgetVal === 'коммерция') parts.push('К');
-    if (yearVal) parts.push(yearVal);
-
-    previewEl.textContent = parts.join('-');
-    numPreviewEl.textContent = numVal ? '№ ' + numVal : '№ —';
-    previewArea.style.display = 'block';
+    var sel = document.getElementById('create_specialty_id');
+    var opt = sel.options[sel.selectedIndex];
+    var abbr = opt.getAttribute('data-abbr') || '???';
+    var budget = document.getElementById('budget_type').value === 'коммерция' ? 'К' : 'Б';
+    var year = document.getElementById('start_year').value || '????';
+    var num = document.getElementById('group_number').value;
+    var parts = [abbr, budget, year];
+    if (num) parts.push(num);
+    document.getElementById('group-preview').textContent = parts.join('-');
+    if (opt.getAttribute('data-dept')) document.getElementById('department').value = opt.getAttribute('data-dept');
 }
 </script>
 {% endblock %}

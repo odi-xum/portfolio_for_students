@@ -1,10 +1,11 @@
 /**
- * app.js — общие скрипты ИС Портфолио
- * Lightbox, CSRF-токен, уведомления (SSE + poll), тема
+ * app.js — Diplom Portfolio
+ * CSRF, theme, lightbox, notifications, welcome modal, nav highlight
  */
 (function () {
     'use strict';
 
+    // ── CSRF token injection ────────────────────────────────────────────
     var csrfToken = document.body.getAttribute('data-csrf-token') || '';
     if (csrfToken) {
         var csrfInput = '<input type="hidden" name="_csrf_token" value="' + csrfToken + '">';
@@ -17,10 +18,42 @@
         });
     }
 
-    var isAuthenticated = document.body.getAttribute('data-user-authenticated') === 'true';
+    // ── Active nav highlight ────────────────────────────────────────────
+    (function () {
+        var path = window.location.pathname;
+        document.querySelectorAll('.top-nav a').forEach(function (a) {
+            var href = a.getAttribute('href');
+            if (href && path.startsWith(href) && href !== '/') {
+                a.classList.add('active-page');
+            }
+        });
+    })();
 
-    if (isAuthenticated) {
+    // ── Theme toggle ────────────────────────────────────────────────────
+    var themeBtn = document.getElementById('themeToggle');
+    var THEME_KEY = 'diplom_theme';
+
+    function setTheme(mode) {
+        var isLight = mode === 'light';
+        document.body.classList.toggle('light-theme', isLight);
+        if (themeBtn) themeBtn.textContent = isLight ? '🌙' : '☀️';
+        localStorage.setItem(THEME_KEY, mode);
+    }
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', function () {
+            setTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light');
+        });
+    }
+
+    var saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'light') setTheme('light');
+
+    // ── Notifications (SSE + poll) ──────────────────────────────────────
+    var isAuth = document.body.getAttribute('data-user-authenticated') === 'true';
+    if (isAuth) {
         var badge = document.getElementById('unread-badge');
+        if (!badge) return;
 
         function showBadge(n) {
             if (n > 0) {
@@ -31,16 +64,16 @@
             }
         }
 
-        // SSE
         if (window.EventSource) {
-            var es = new EventSource('/api/notifications/stream');
-            es.addEventListener('message', function (e) {
-                try { showBadge(JSON.parse(e.data).unread); } catch (_) {}
-            });
-            es.addEventListener('error', function () { es.close(); });
+            (function() {
+                var es = new EventSource('/api/notifications/stream');
+                es.addEventListener('message', function (e) {
+                    try { showBadge(JSON.parse(e.data).unread); } catch (_) {}
+                });
+                es.addEventListener('error', function () { es.close(); });
+            })();
         }
 
-        // Poll fallback
         function pollNotifications() {
             fetch('/api/notifications/count')
                 .then(function (r) { return r.json(); })
@@ -51,7 +84,7 @@
         setInterval(pollNotifications, 30000);
     }
 
-    // Lightbox
+    // ── Lightbox ────────────────────────────────────────────────────────
     var overlay = document.getElementById('lightbox-overlay');
     var img = document.getElementById('lightbox-img');
     var zoomed = false;
@@ -59,13 +92,10 @@
     if (overlay && img) {
         window.openLightbox = function (src) {
             img.src = src;
-            img.style.maxWidth = '90vw';
-            img.style.maxHeight = '90vh';
-            img.style.width = '';
-            img.style.height = '';
+            img.classList.remove('zoomed');
             img.style.cursor = 'zoom-in';
             zoomed = false;
-            overlay.style.display = 'block';
+            overlay.style.display = 'flex';
             document.body.style.overflow = 'hidden';
         };
 
@@ -75,54 +105,40 @@
             document.body.style.overflow = '';
             img.src = '';
             zoomed = false;
+            img.classList.remove('zoomed');
         };
 
         window.toggleZoom = function (e) {
             e.stopPropagation();
-            if (!zoomed) {
-                img.style.maxWidth = 'none';
-                img.style.maxHeight = 'none';
-                img.style.width = 'auto';
-                img.style.height = 'auto';
-                img.style.cursor = 'zoom-out';
-                zoomed = true;
-            } else {
-                img.style.maxWidth = '90vw';
-                img.style.maxHeight = '90vh';
-                img.style.width = '';
-                img.style.height = '';
-                img.style.cursor = 'zoom-in';
-                zoomed = false;
-            }
+            zoomed = !zoomed;
+            img.classList.toggle('zoomed', zoomed);
+            img.style.cursor = zoomed ? 'zoom-out' : 'zoom-in';
         };
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay.style.display === 'block') closeLightbox();
+            if (e.key === 'Escape' && overlay.style.display === 'flex') closeLightbox();
         });
     }
 
-    // Theme toggle
-    var themeBtns = document.querySelectorAll('.theme-toggle');
-    if (themeBtns.length) {
-        var STORAGE_KEY = 'diplom_theme';
-
-        function setTheme(mode) {
-            var isLight = mode === 'light';
-            document.body.classList.toggle('light-theme', isLight);
-            themeBtns.forEach(function (b) {
-                b.textContent = isLight ? '🌙' : '☀️';
-                b.title = isLight ? 'Тёмная тема' : 'Светлая тема';
-            });
-            localStorage.setItem(STORAGE_KEY, mode);
+    // ── Welcome modal ───────────────────────────────────────────────────
+    var welcome = document.getElementById('welcome-modal');
+    if (welcome) {
+        var WELCOME_KEY = 'diplom_welcome_dismissed';
+        if (localStorage.getItem(WELCOME_KEY) !== '1') {
+            setTimeout(function () {
+                welcome.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }, 400);
         }
-
-        themeBtns.forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                setTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light');
-            });
-        });
-
-        var saved = localStorage.getItem(STORAGE_KEY);
-        if (saved === 'light') setTheme('light');
     }
+
+    window.closeWelcomeModal = function () {
+        if (!welcome) return;
+        welcome.style.display = 'none';
+        document.body.style.overflow = '';
+        var cb = document.getElementById('welcome-dont-show');
+        if (cb && cb.checked) {
+            localStorage.setItem('diplom_welcome_dismissed', '1');
+        }
+    };
 })();

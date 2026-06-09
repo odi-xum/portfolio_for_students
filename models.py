@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, List
 from sqlalchemy import (Column, Integer, String, Text, Boolean, Date, DateTime,
-                        ForeignKey, create_engine)
+                        ForeignKey)
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from database import Base
 
@@ -32,9 +32,10 @@ class User(Base):
     notifications = relationship('Notification', back_populates='user', lazy=True, cascade='all, delete-orphan')
     curated_groups = relationship('Group', foreign_keys='Group.curator_id', back_populates='curator', lazy='select')
 
-    def is_admin(self) -> bool:   return self.role == 'admin'
-    def is_student(self) -> bool: return self.role == 'student'
-    def is_curator(self) -> bool: return self.role == 'curator'
+    def is_admin(self) -> bool:      return self.role == 'admin'
+    def is_student(self) -> bool:    return self.role == 'student'
+    def is_curator(self) -> bool:    return self.role == 'curator'
+    def is_commission(self) -> bool: return self.role == 'commission'
 
     @property
     def full_name(self) -> str:

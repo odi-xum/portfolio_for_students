@@ -1,37 +1,36 @@
 {% extends 'base.html' %}
-
-{% block title %}Пользователи — ИС Портфолио{% endblock %}
+{% block title %}Пользователи — Портфолио{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <h1 style="color: var(--blue); margin: 0;">👥 Управление пользователями</h1>
-    <a href="{{ url_for('admin_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← На панель</a>
+<div class="flex-between mb-3">
+    <div><h1 class="page-title">👥 Управление пользователями</h1><p class="page-subtitle">Добавление, импорт и удаление учётных записей.</p></div>
 </div>
 
 <!-- Форма добавления пользователя -->
-<div class="form-card" style="margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 1rem; color: var(--green);">➕ Добавить пользователя</h3>
+<div class="card">
+    <h3 class="card-title">➕ Добавить пользователя</h3>
     <form action="{{ url_for('admin_add_user') }}" method="POST">
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-            <div class="form-group" style="margin: 0;">
-                <label for="username">Логин *</label>
-                <input type="text" id="username" name="username" class="form-control" required placeholder="ivanov">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="username">Логин *</label>
+                <input type="text" id="username" name="username" class="form-input" required placeholder="ivanov">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="password">Пароль *</label>
-                <input type="password" id="password" name="password" class="form-control" required placeholder="••••••">
+            <div class="form-group">
+                <label class="form-label" for="password">Пароль *</label>
+                <input type="password" id="password" name="password" class="form-input" required placeholder="••••••">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="role">Роль *</label>
-                <select id="role" name="role" class="form-control" required>
+            <div class="form-group">
+                <label class="form-label" for="role">Роль *</label>
+                <select id="role" name="role" class="form-select" required>
                     <option value="student">Студент</option>
                     <option value="curator">Куратор</option>
+                    <option value="commission">Комиссия</option>
                     <option value="admin">Администратор</option>
                 </select>
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="group_id">Группа (для студентов)</label>
-                <select id="group_id" name="group_id" class="form-control">
+            <div class="form-group">
+                <label class="form-label" for="group_id">Группа</label>
+                <select id="group_id" name="group_id" class="form-select">
                     <option value="">— Не выбрана —</option>
                     {% for g in groups %}
                     <option value="{{ g.id }}">{{ g.name }} — {{ g.specialty_code }}</option>
@@ -39,95 +38,84 @@
                 </select>
             </div>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
-            <div class="form-group" style="margin: 0;">
-                <label for="last_name">Фамилия</label>
-                <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Иванов">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="last_name">Фамилия</label>
+                <input type="text" id="last_name" name="last_name" class="form-input" placeholder="Иванов">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="first_name">Имя</label>
-                <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Иван">
+            <div class="form-group">
+                <label class="form-label" for="first_name">Имя</label>
+                <input type="text" id="first_name" name="first_name" class="form-input" placeholder="Иван">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="patronymic">Отчество</label>
-                <input type="text" id="patronymic" name="patronymic" class="form-control" placeholder="Иванович">
+            <div class="form-group">
+                <label class="form-label" for="patronymic">Отчество</label>
+                <input type="text" id="patronymic" name="patronymic" class="form-input" placeholder="Иванович">
             </div>
         </div>
-        <button type="submit" class="btn btn-success" style="margin-top: 1rem;">➕ Создать пользователя</button>
+        <button type="submit" class="btn btn-success">➕ Создать пользователя</button>
     </form>
 </div>
 
-<!-- Форма импорта -->
-<div class="form-card" style="margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 1rem; color: var(--orange);">📥 Импорт студентов из JSON</h3>
+<!-- Импорт -->
+<div class="card">
+    <h3 class="card-title">📥 Импорт студентов из JSON</h3>
     <form action="{{ url_for('admin_import_students') }}" method="POST" enctype="multipart/form-data">
         <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group" style="margin: 0; flex: 1;">
-                <label for="json_file">JSON-файл</label>
-                <input type="file" id="json_file" name="json_file" accept=".json" class="form-control" required>
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label class="form-label" for="json_file">JSON-файл</label>
+                <input type="file" id="json_file" name="json_file" accept=".json" class="form-input" required>
             </div>
-            <button type="submit" class="btn btn-warning" style="white-space: nowrap;">📥 Импортировать</button>
+            <button type="submit" class="btn btn-warning">📥 Импортировать</button>
         </div>
-        <small style="color: var(--gray); display: block; margin-top: 0.5rem;">
-            Формат: [{"username":"ivanov","password":"111","group":"ИСП-Б-2022"}]
-        </small>
+        <p class="text-muted" style="margin-top: 0.5rem;">Формат: [{"username":"ivanov","password":"111","group":"ИСП-Б-2022"}]</p>
     </form>
 </div>
 
-<!-- Форма импорта из Excel -->
-<div class="form-card" style="margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 1rem; color: var(--green);">📊 Импорт студентов из Excel</h3>
+<div class="card">
+    <h3 class="card-title">📊 Импорт студентов из Excel</h3>
     <form action="{{ url_for('admin_import_excel') }}" method="POST" enctype="multipart/form-data">
         <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group" style="margin: 0; flex: 1;">
-                <label for="excel_file">Excel-файл (.xlsx)</label>
-                <input type="file" id="excel_file" name="excel_file" accept=".xlsx" class="form-control" required>
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label class="form-label" for="excel_file">Excel-файл (.xlsx)</label>
+                <input type="file" id="excel_file" name="excel_file" accept=".xlsx" class="form-input" required>
             </div>
-            <button type="submit" class="btn btn-success" style="white-space: nowrap;">📊 Импортировать</button>
+            <button type="submit" class="btn btn-success">📊 Импортировать</button>
         </div>
-        <small style="color: var(--gray); display: block; margin-top: 0.5rem;">
-            Колонки: username, password, last_name, first_name, patronymic, group
-        </small>
+        <p class="text-muted" style="margin-top: 0.5rem;">Колонки: username, password, last_name, first_name, patronymic, group</p>
     </form>
 </div>
 
 <!-- Таблица пользователей -->
-<div class="table-responsive">
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Логин</th>
-                <th>Роль</th>
-                <th>ФИО</th>
-                <th>Группа</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for u in users %}
-            <tr>
-                <td>{{ u.id }}</td>
-                <td><strong>{{ u.username }}</strong></td>
-                <td>
-                    {% if u.role == 'admin' %}<span style="color: var(--red);">Админ</span>
-                    {% elif u.role == 'curator' %}<span style="color: var(--orange);">Куратор</span>
-                    {% elif u.role == 'student' %}<span style="color: var(--green);">Студент</span>
-                    {% else %}{{ u.role }}{% endif %}
-                </td>
-                <td>{{ u.full_name or '—' }}</td>
-                <td>{{ u.group_name or '—' }}</td>
-                <td>
-                    <form action="{{ url_for('admin_delete_user', user_id=u.id) }}" method="POST" onsubmit="return confirm('Удалить пользователя {{ u.username }}?')">
-                        <button type="submit" class="btn btn-danger" style="padding: 0.2rem 0.6rem; font-size: 0.85rem;"
-                                {% if u.id == current_user.id %}disabled title="Нельзя удалить себя"{% endif %}>
-                            🗑️ Удалить
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ID</th><th>Логин</th><th>Роль</th><th>ФИО</th><th>Группа</th><th>Действия</th></tr></thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="text-muted">{{ u.id }}</td>
+                    <td><strong>{{ u.username }}</strong></td>
+                    <td>
+                        {% if u.role == 'admin' %}<span class="badge badge-orange">Админ</span>
+                        {% elif u.role == 'curator' %}<span class="badge badge-purple">Куратор</span>
+                        {% elif u.role == 'commission' %}<span class="badge badge-blue">Комиссия</span>
+                        {% elif u.role == 'student' %}<span class="badge badge-blue">Студент</span>
+                        {% else %}{{ u.role }}{% endif %}
+                    </td>
+                    <td>{{ u.full_name or '—' }}</td>
+                    <td>{{ u.group_name or '—' }}</td>
+                    <td>
+                        <form action="{{ url_for('admin_delete_user', user_id=u.id) }}" method="POST" onsubmit="return confirm('Удалить пользователя {{ u.username }}?')">
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                    {% if u.id == current_user.id %}disabled title="Нельзя удалить себя"{% endif %}>
+                                🗑️ Удалить
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

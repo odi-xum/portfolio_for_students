@@ -10,6 +10,7 @@ class UserRole(StrEnum):
     ADMIN = 'admin'
     STUDENT = 'student'
     CURATOR = 'curator'
+    COMMISSION = 'commission'
 
 
 # ── Статусы мероприятий (Event) ────────────────────────────────────────────

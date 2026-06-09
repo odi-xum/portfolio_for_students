@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Комиссия — Портфолио{% endblock %}
+
+{% block content %}
+<h1 class="page-title">🏛️ Панель комиссии</h1>
+<p class="page-subtitle">Обзор всех групп и студентов. Лучшая группа — по среднему баллу одобренных мероприятий.</p>
+
+<div class="stat-grid">
+    <div class="stat-card stat-blue"><div class="stat-icon">👥</div><div class="stat-value">{{ total_students }}</div><div class="stat-label">Всего студентов</div></div>
+    <div class="stat-card stat-purple"><div class="stat-icon">📄</div><div class="stat-value">{{ total_events }}</div><div class="stat-label">Мероприятий</div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">🏆</div><div class="stat-value" style="font-size: 1.2rem;">{{ best_group.group.name if best_group else '—' }}</div><div class="stat-label">Лучшая группа</div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">⭐</div><div class="stat-value">{{ best_group.avg_score if best_group else '—' }}</div><div class="stat-label">Средний балл</div></div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">📊 Рейтинг учебных групп</h3>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Группа</th><th>Студентов</th><th>Одобрено</th><th>Сумма</th><th>Средний балл</th></tr></thead>
+            <tbody>
+                {% for g in groups %}
+                <tr>
+                    <td><strong>{{ loop.index }}</strong></td>
+                    <td>{{ g.group.name }}</td>
+                    <td class="text-center">{{ g.student_count }}</td>
+                    <td class="text-center">{{ g.approved_count }}</td>
+                    <td class="text-center">{{ g.total_score }}</td>
+                    <td class="text-center"><strong class="{% if g.avg_score >= 4 %}text-success{% elif g.avg_score >= 3 %}text-warning{% else %}text-danger{% endif %}">{{ g.avg_score }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if top_students %}
+<div class="card">
+    <h3 class="card-title">🌟 Лучшие студенты</h3>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Студент</th><th>Группа</th><th>Мероприятий</th><th>Сумма баллов</th></tr></thead>
+            <tbody>
+                {% for t in top_students %}
+                <tr>
+                    <td><strong>{{ loop.index }}</strong></td>
+                    <td><a href="{{ url_for('commission_student_view', student_id=t.student.id) }}" style="color: var(--blue);">{{ t.student.full_name }}</a></td>
+                    <td>{{ t.student.group_name or '—' }}</td>
+                    <td class="text-center">{{ t.event_count }}</td>
+                    <td class="text-center"><strong class="text-success">{{ t.total_score }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="action-grid">
+    <a href="{{ url_for('commission_posts') }}" class="action-card">
+        <div class="action-icon">📋</div><div><h3>Все посты</h3><p>Просмотр и фильтрация всех мероприятий</p></div>
+    </a>
+    <a href="{{ url_for('commission_students') }}" class="action-card">
+        <div class="action-icon">👥</div><div><h3>Студенты</h3><p>Список всех студентов по группам</p></div>
+    </a>
+    <a href="{{ url_for('commission_stats') }}" class="action-card">
+        <div class="action-icon">📊</div><div><h3>Статистика и графики</h3><p>Диаграммы, гистограммы, рейтинги</p></div>
+    </a>
+</div>
+{% endblock %}

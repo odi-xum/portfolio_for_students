@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Студенты — Комиссия{% endblock %}
+
+{% block content %}
+<h1 class="page-title">👥 Студенты</h1>
+<p class="page-subtitle">Список всех студентов с фильтрацией по группам.</p>
+
+<div class="card">
+    <form method="get" class="filter-bar">
+        <div class="form-group">
+            <label class="form-label">Группа</label>
+            <select name="group_id" class="form-select"><option value="">Все группы</option>
+                {% for g in groups %}<option value="{{ g.id }}" {% if current_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 180px;">
+            <label class="form-label">Поиск</label>
+            <input type="text" name="search" value="{{ current_search }}" class="form-input" placeholder="Фамилия, имя или логин...">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍 Найти</button>
+    </form>
+</div>
+
+{% if students %}
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ФИО</th><th>Логин</th><th>Группа</th><th>Действия</th></tr></thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td><strong>{{ s.full_name }}</strong></td>
+                    <td class="text-muted">{{ s.username }}</td>
+                    <td>{{ s.group_name or '—' }}</td>
+                    <td><a href="{{ url_for('commission_student_view', student_id=s.id) }}" class="btn btn-primary btn-sm">📋 Профиль</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="empty-state"><div class="empty-icon">📭</div><p>Студентов не найдено.</p></div>
+{% endif %}
+{% endblock %}

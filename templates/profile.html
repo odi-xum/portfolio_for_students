@@ -1,67 +1,48 @@
 {% extends 'base.html' %}
-
-{% block title %}Профиль — ИС Портфолио{% endblock %}
+{% block title %}Профиль — Портфолио{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <h1 style="color: var(--orange); margin: 0;">👤 Профиль</h1>
-</div>
+<h1 class="page-title">👤 Профиль</h1>
+<p class="page-subtitle">Редактирование личных данных и смена пароля.</p>
 
-<div class="form-card" style="margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 1.5rem; color: var(--blue); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-        Личные данные
-    </h3>
+<div class="card">
+    <h3 class="card-title">Личные данные</h3>
     <form method="POST">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-            <div class="form-group" style="margin: 0;">
-                <label for="last_name">Фамилия</label>
-                <input type="text" id="last_name" name="last_name" class="form-control"
-                       value="{{ current_user.last_name or '' }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="last_name">Фамилия</label>
+                <input type="text" id="last_name" name="last_name" class="form-input" value="{{ current_user.last_name or '' }}">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="first_name">Имя</label>
-                <input type="text" id="first_name" name="first_name" class="form-control"
-                       value="{{ current_user.first_name or '' }}">
+            <div class="form-group">
+                <label class="form-label" for="first_name">Имя</label>
+                <input type="text" id="first_name" name="first_name" class="form-input" value="{{ current_user.first_name or '' }}">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="patronymic">Отчество</label>
-                <input type="text" id="patronymic" name="patronymic" class="form-control"
-                       value="{{ current_user.patronymic or '' }}">
+            <div class="form-group">
+                <label class="form-label" for="patronymic">Отчество</label>
+                <input type="text" id="patronymic" name="patronymic" class="form-input" value="{{ current_user.patronymic or '' }}">
             </div>
         </div>
-
-        <h3 style="margin-bottom: 1rem; color: var(--yellow); border-bottom: 1px solid var(--bg2); padding-bottom: 0.5rem;">
-            🔒 Смена пароля
-        </h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-            <div class="form-group" style="margin: 0;">
-                <label for="old_password">Старый пароль</label>
-                <input type="password" id="old_password" name="old_password" class="form-control" placeholder="••••••">
+        <h3 class="card-title" style="color: var(--warning);">🔒 Смена пароля</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="old_password">Старый пароль</label>
+                <input type="password" id="old_password" name="old_password" class="form-input" placeholder="••••••">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="new_password">Новый пароль</label>
-                <input type="password" id="new_password" name="new_password" class="form-control" placeholder="••••••">
+            <div class="form-group">
+                <label class="form-label" for="new_password">Новый пароль</label>
+                <input type="password" id="new_password" name="new_password" class="form-input" placeholder="••••••">
             </div>
-            <div class="form-group" style="margin: 0;">
-                <label for="confirm_password">Подтвердите пароль</label>
-                <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="••••••">
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Подтвердите пароль</label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="••••••">
             </div>
         </div>
-
-        <div style="display: flex; gap: 0.75rem;">
-            <button type="submit" class="btn btn-success">💾 Сохранить</button>
-        </div>
+        <button type="submit" class="btn btn-success">💾 Сохранить</button>
     </form>
 </div>
 
-<div class="form-card">
-    <h3 style="margin-bottom: 1rem; color: var(--gray);">Информация</h3>
-    <p style="color: var(--fg1); margin: 0;">
-        Логин: <strong>{{ current_user.username }}</strong><br>
-        Роль: <strong>{{ current_user.role }}</strong><br>
-        {% if current_user.group_name %}
-        Группа: <strong>{{ current_user.group_name }}</strong>
-        {% endif %}
-    </p>
+<div class="card">
+    <h3 class="card-title text-muted">Информация</h3>
+    <p class="text-sm">Логин: <strong>{{ current_user.username }}</strong><br>Роль: <strong>{{ current_user.role }}</strong>{% if current_user.group_name %}<br>Группа: <strong>{{ current_user.group_name }}</strong>{% endif %}</p>
 </div>
 {% endblock %}

@@ -1,7 +1,6 @@
 """
 Импорт студентов из Excel-файла.
 """
-import io
 from openpyxl import load_workbook
 from database import SessionLocal
 from models import User, Group

@@ -1,55 +1,45 @@
 {% extends 'base.html' %}
-
-{% block title %}Уведомления — ИС Портфолио{% endblock %}
+{% block title %}Уведомления — Портфолио{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <h1 style="color: var(--blue); margin: 0;">🔔 Уведомления</h1>
-    <div style="display: flex; gap: 1rem;">
+<div class="flex-between mb-3">
+    <h1 class="page-title">🔔 Уведомления</h1>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
         {% if unread_count > 0 %}
-        <form action="{{ url_for('mark_all_notifications_read') }}" method="POST" style="display: inline;">
-            <button type="submit" class="btn" style="background-color: var(--bg2); color: var(--fg1); padding: 0.5rem 1rem; font-size: 0.9rem;">Прочитать все</button>
+        <form action="{{ url_for('mark_all_notifications_read') }}" method="POST">
+            <button type="submit" class="btn btn-ghost btn-sm">Прочитать все</button>
         </form>
         {% endif %}
-        <span style="color: var(--gray); font-size: 0.9rem; align-self: center;">
-            {% if unread_count > 0 %}{{ unread_count }} непрочитанных{% else %}Непрочитанных нет{% endif %}
-        </span>
+        <span class="text-sm text-muted">{{ unread_count if unread_count > 0 else 'Нет' }} непрочитанных</span>
     </div>
 </div>
 
-<div class="post-grid">
+{% if notifications %}
+<div class="post-list">
     {% for notif in notifications %}
-    <div class="post-card" style="padding: 1.25rem; {% if not notif.is_read %}border-left-color: var(--blue); background-color: var(--bg2);{% endif %}">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+    <div class="post-card" style="padding: 1rem 1.25rem; {% if not notif.is_read %}border-left: 3px solid var(--blue); background: var(--bg2);{% endif %}">
+        <div class="flex-between" style="gap: 1rem;">
             <div style="flex: 1;">
                 {% if notif.link %}
-                <a href="{{ notif.link }}" style="color: var(--fg0); text-decoration: none;">
-                    <p style="margin: 0; {% if not notif.is_read %}font-weight: bold;{% endif %}">{{ notif.message }}</p>
-                </a>
+                <a href="{{ notif.link }}" style="color: var(--text-0); text-decoration: none; font-weight: {% if not notif.is_read %}600{% else %}400{% endif %};">{{ notif.message }}</a>
                 {% else %}
-                <p style="margin: 0; {% if not notif.is_read %}font-weight: bold;{% endif %}">{{ notif.message }}</p>
+                <p style="margin: 0; font-weight: {% if not notif.is_read %}600{% else %}400{% endif %};">{{ notif.message }}</p>
                 {% endif %}
-                <small style="color: var(--gray); display: block; margin-top: 0.35rem;">
-                    {{ notif.created_at.strftime('%d.%m.%Y %H:%M') if notif.created_at else '' }}
-                </small>
+                <div class="text-sm text-muted" style="margin-top: 0.3rem;">{{ notif.created_at.strftime('%d.%m.%Y %H:%M') if notif.created_at else '' }}</div>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; flex-shrink: 0;">
-                {% if notif.link %}
-                <a href="{{ notif.link }}" class="btn" style="background-color: var(--bg3); color: var(--blue); padding: 0.25rem 0.6rem; font-size: 0.8rem; text-decoration: none;">Открыть</a>
-                {% endif %}
+            <div style="display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0;">
+                {% if notif.link %}<a href="{{ notif.link }}" class="btn btn-ghost btn-sm">Открыть</a>{% endif %}
                 {% if not notif.is_read %}
-                <form action="{{ url_for('mark_notification_read', notif_id=notif.id) }}" method="POST" style="display: inline;">
-                    <button type="submit" class="btn" style="background-color: var(--bg3); color: var(--gray); padding: 0.15rem 0.5rem; font-size: 0.75rem;">✓</button>
+                <form action="{{ url_for('mark_notification_read', notif_id=notif.id) }}" method="POST">
+                    <button type="submit" class="btn btn-ghost btn-sm" title="Отметить прочитанным">✓</button>
                 </form>
                 {% endif %}
             </div>
         </div>
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 3rem; background-color: var(--bg1); border-radius: 6px; border: 1px dashed var(--gray);">
-        <div style="font-size: 2rem; margin-bottom: 1rem;">🔔</div>
-        <p style="color: var(--gray); margin: 0;">У вас пока нет уведомлений.</p>
-    </div>
     {% endfor %}
 </div>
+{% else %}
+<div class="empty-state"><div class="empty-icon">🔔</div><p>У вас пока нет уведомлений.</p></div>
+{% endif %}
 {% endblock %}

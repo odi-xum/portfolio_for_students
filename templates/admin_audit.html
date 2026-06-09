@@ -1,74 +1,55 @@
 {% extends 'base.html' %}
-{% block title %}Аудит — ИС Портфолио{% endblock %}
+{% block title %}Аудит — Портфолио{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h1 style="color: var(--orange); margin: 0;">📋 Аудит действий</h1>
-    <a href="{{ url_for('admin_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none;">← На панель</a>
+<h1 class="page-title">📋 Аудит действий</h1>
+<p class="page-subtitle">Лог всех действий пользователей в системе.</p>
+
+<div class="card">
+    <form method="GET" class="filter-bar" style="margin-bottom: 0;">
+        <div class="form-group">
+            <label class="form-label" for="action">Действие</label>
+            <select id="action" name="action" class="form-select" onchange="this.form.submit()">
+                <option value="">— Все действия —</option>
+                {% for a in actions %}<option value="{{ a }}" {{ 'selected' if action_filter == a }}>{{ a }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="username">Пользователь</label>
+            <input type="text" id="username" name="username" class="form-input" placeholder="Логин..." value="{{ user_filter }}" onchange="this.form.submit()">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍</button>
+        <a href="{{ url_for('admin_audit') }}" class="btn btn-ghost btn-sm">Сбросить</a>
+    </form>
+    <p class="text-muted" style="margin-top: 0.5rem;">Всего записей: <strong>{{ total }}</strong> · Показано: {{ logs|length }}</p>
 </div>
 
-<form method="GET" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: flex-end;">
-    <div class="form-group" style="margin: 0; min-width: 200px;">
-        <label for="action" style="font-size: 0.85rem;">Действие</label>
-        <select id="action" name="action" class="form-control" onchange="this.form.submit()">
-            <option value="">— Все действия —</option>
-            {% for a in actions %}
-            <option value="{{ a }}" {{ 'selected' if action_filter == a }}>{{ a }}</option>
-            {% endfor %}
-        </select>
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ID</th><th>Дата</th><th>Пользователь</th><th>Действие</th><th>Детали</th><th>IP</th></tr></thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="text-muted">{{ log.id }}</td>
+                    <td style="white-space: nowrap;">{{ log.created_at.strftime('%d.%m %H:%M') if log.created_at else '' }}</td>
+                    <td><strong>{{ log.username }}</strong></td>
+                    <td><span class="badge badge-blue">{{ log.action }}</span></td>
+                    <td style="max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.details or '' }}">{{ log.details or '—' }}</td>
+                    <td class="text-muted" style="font-family: monospace; font-size: 0.8rem;">{{ log.ip_address or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted">Нет записей.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    <div class="form-group" style="margin: 0; min-width: 200px;">
-        <label for="username" style="font-size: 0.85rem;">Пользователь</label>
-        <input type="text" id="username" name="username" class="form-control"
-               placeholder="Логин..." value="{{ user_filter }}" onchange="this.form.submit()">
-    </div>
-    <div style="padding-top: 1.2rem;">
-        <button type="submit" class="btn btn-primary" style="padding: 0.4rem 1rem;">🔍</button>
-        <a href="{{ url_for('admin_audit') }}" class="btn" style="background: var(--bg2); color: var(--fg1); padding: 0.4rem 1rem;">Сбросить</a>
-    </div>
-</form>
-
-<p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem;">
-    Всего записей: <strong>{{ total }}</strong>
-    · Показано: {{ logs|length }}
-</p>
-
-<div class="table-responsive">
-    <table style="font-size: 0.85rem;">
-        <thead>
-            <tr>
-                <th style="width: 50px;">ID</th>
-                <th style="width: 110px;">Дата</th>
-                <th style="width: 90px;">Пользователь</th>
-                <th style="width: 120px;">Действие</th>
-                <th>Детали</th>
-                <th style="width: 100px;">IP</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for log in logs %}
-            <tr>
-                <td style="color: var(--gray);">{{ log.id }}</td>
-                <td style="white-space: nowrap;">{{ log.created_at.strftime('%d.%m %H:%M') if log.created_at else '' }}</td>
-                <td style="font-weight: bold; color: var(--fg0);">{{ log.username }}</td>
-                <td><span class="status-badge" style="font-size: 0.75rem; background: var(--bg2); color: var(--fg1); padding: 0.15rem 0.4rem;">{{ log.action }}</span></td>
-                <td style="color: var(--fg1); max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.details or '' }}">{{ log.details or '—' }}</td>
-                <td style="color: var(--gray); font-family: monospace; font-size: 0.8rem;">{{ log.ip_address or '—' }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="6" style="text-align: center; color: var(--gray);">Нет записей.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
 </div>
 
 {% if total > per_page %}
-<div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+<div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
     {% for p in range(1, (total // per_page) + 2) %}
     <a href="?page={{ p }}&action={{ action_filter }}&username={{ user_filter }}"
-       class="btn" style="padding: 0.25rem 0.6rem; font-size: 0.85rem;
-       {% if p == page %}background: var(--blue); color: #fff;{% else %}background: var(--bg2); color: var(--fg1);{% endif %}">
-        {{ p }}
-    </a>
+       class="btn btn-sm {% if p == page %}btn-primary{% else %}btn-ghost{% endif %}">{{ p }}</a>
     {% endfor %}
 </div>
 {% endif %}

@@ -4,81 +4,167 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Портфолио — {{ student.last_name }} {{ student.first_name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        :root {
-            --bg0: #1d2021; --bg1: #282828; --bg2: #32302f;
-            --fg0: #fbf1c7; --fg1: #ddc7a1;
-            --green: #a9b665; --blue: #7daea3; --orange: #e78a4e; --gray: #928374;
+        .portfolio-header {
+            text-align: center;
+            padding: 2.5rem 1.5rem 1.5rem;
+            background: var(--bg1);
+            border-bottom: 2px solid var(--bg2);
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-sm);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: var(--bg0); color: var(--fg0);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 16px; line-height: 1.6; padding: 2rem;
-            max-width: 900px; margin: 0 auto;
+        .portfolio-avatar {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: var(--orange);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: var(--bg0); font-weight: 700;
+            margin: 0 auto 1rem;
+            border: 3px solid var(--orange-muted);
         }
-        .header { text-align: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--bg2); }
-        .header h1 { color: var(--orange); font-size: 1.8rem; }
-        .header .info { color: var(--gray); margin-top: 0.5rem; font-size: 0.9rem; }
-        .header .avg { color: var(--green); font-size: 1.2rem; font-weight: bold; margin-top: 0.5rem; }
-        .card { background: var(--bg1); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; border-left: 3px solid var(--blue); }
-        .card h3 { color: var(--fg0); margin-bottom: 0.5rem; }
-        .card .meta { color: var(--gray); font-size: 0.85rem; }
-        .card .score { color: var(--green); font-weight: bold; }
-        .card-files { text-align: center; margin-top: 1rem; }
-        .card-files img { max-width: 100%; max-height: 500px; border-radius: 4px; border: 1px solid var(--bg2); display: block; margin: 0.5rem auto; }
-        .card { page-break-inside: avoid; }
-        .card + .card { margin-top: 1.5rem; }
-        @media print { .card-files img { max-height: 400px; } }
-        .empty { text-align: center; color: var(--gray); padding: 3rem; }
+        .portfolio-name { font-size: 1.6rem; font-weight: 700; color: var(--fg0); margin-bottom: 0.25rem; }
+        .portfolio-meta { color: var(--fg2); font-size: 0.9rem; margin-bottom: 0.75rem; }
+        .portfolio-stats {
+            display: flex; justify-content: center; gap: 2rem;
+            margin-top: 1rem; flex-wrap: wrap;
+        }
+        .portfolio-stat {
+            text-align: center;
+        }
+        .portfolio-stat .num { font-size: 1.5rem; font-weight: 700; color: var(--blue); }
+        .portfolio-stat .lbl { font-size: 0.78rem; color: var(--fg2); text-transform: uppercase; letter-spacing: 0.5px; }
+        .post-card { margin-bottom: 1rem; }
+        .post-card-files { margin-top: 0.75rem; }
+        .portfolio-footer {
+            text-align: center; padding: 2rem;
+            color: var(--fg2); font-size: 0.8rem;
+        }
+        .theme-btn-fixed {
+            position: fixed; top: 1rem; right: 1rem; z-index: 100;
+            background: var(--bg1); border: 1px solid var(--bg3);
+            border-radius: var(--radius); padding: 0.4rem 0.6rem;
+            cursor: pointer; font-size: 1.1rem;
+            transition: all var(--transition);
+        }
+        .theme-btn-fixed:hover { background: var(--bg2); }
         @media print {
-            body { background: #fff; color: #000; }
-            .header { border-bottom-color: #ccc; }
-            .card { background: #f5f5f5; border-left-color: #333; }
-            .card h3 { color: #000; }
-            .card .meta { color: #666; }
-            .header .info { color: #666; }
+            .theme-btn-fixed { display: none; }
+            .portfolio-header { background: #f5f5f5 !important; border-bottom-color: #ccc !important; }
+            .portfolio-name { color: #000 !important; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>{{ student.last_name }} {{ student.first_name }} {{ student.patronymic or '' }}</h1>
-        <div class="info">
+
+<button class="theme-btn-fixed" id="themeToggle" title="Сменить тему">☀️</button>
+
+<div class="container" style="max-width: 800px;">
+    <div class="portfolio-header">
+        <div class="portfolio-avatar">{{ student.last_name[:1] or student.username[:1] | upper }}</div>
+        <div class="portfolio-name">{{ student.last_name }} {{ student.first_name }} {{ student.patronymic or '' }}</div>
+        <div class="portfolio-meta">
             Группа: {{ student.group_name or '—' }} &middot; Логин: {{ student.username }}
         </div>
-        <div class="avg">
-            Средний балл: {{ '%.2f'|format(avg_score) }} &middot; Мероприятий: {{ events|length }}
+        <div class="portfolio-stats">
+            <div class="portfolio-stat">
+                <div class="num">{{ events|length }}</div>
+                <div class="lbl">Мероприятий</div>
+            </div>
+            <div class="portfolio-stat">
+                <div class="num" style="color: var(--green);">{{ '%.2f'|format(avg_score) }}</div>
+                <div class="lbl">Средний балл</div>
+            </div>
+            <div class="portfolio-stat">
+                <div class="num" style="color: var(--orange);">{{ events|sum(attribute='score') }}</div>
+                <div class="lbl">Сумма баллов</div>
+            </div>
         </div>
     </div>
 
     {% if events %}
         {% for e in events %}
-        <div class="card">
-            <h3>{{ e.title }}</h3>
-            <p style="color: var(--fg1);">{{ e.description or '' }}</p>
+        <div class="post-card status-approved">
+            <div class="post-card-header">
+                <h3 class="post-card-title">{{ e.title }}</h3>
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0;">
+                    {% if e.category %}
+                    <span class="badge badge-blue">{{ e.category }}</span>
+                    {% endif %}
+                    <span class="badge badge-approved">★ {{ e.score }}</span>
+                </div>
+            </div>
+            {% if e.description %}
+            <div class="post-card-body">{{ e.description }}</div>
+            {% endif %}
             {% if e.files %}
-            <div class="card-files">
+            <div class="post-card-files">
                 {% for f in e.files %}
                 {% if f.file_type in ('png', 'jpg', 'jpeg') %}
-                <img src="{{ f.file_path }}" alt="Вложение">
+                <img src="/diplom/{{ f.file_path.split('diplom/')[-1] }}" class="post-thumb" alt="Вложение" onclick="openLightbox('/diplom/{{ f.file_path.split('diplom/')[-1] }}')">
+                {% else %}
+                <a href="/diplom/{{ f.file_path.split('diplom/')[-1] }}" class="file-pill" target="_blank">📄 PDF</a>
                 {% endif %}
                 {% endfor %}
             </div>
             {% endif %}
-            <div class="meta">
-                Оценка: <span class="score">{{ e.score }}</span> &middot;
+            <div class="post-card-meta" style="margin-top: 0.5rem; margin-bottom: 0;">
                 {{ e.created_at.strftime('%d.%m.%Y') if e.created_at else '' }}
                 {% if e.curator_comment %}
-                &middot; Комментарий: {{ e.curator_comment }}
+                &middot; {{ e.curator_comment }}
                 {% endif %}
             </div>
         </div>
         {% endfor %}
     {% else %}
-        <div class="empty">
-            <p>У студента пока нет одобренных мероприятий.</p>
-        </div>
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>У студента пока нет одобренных мероприятий.</p>
+    </div>
     {% endif %}
+
+    <div class="portfolio-footer">
+        ИС Портфолио студентов &mdash; АУ «ХМТПК»
+    </div>
+</div>
+
+<div id="lightbox-overlay" class="lightbox-overlay" style="display:none;" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img id="lightbox-img" class="lightbox-img" style="cursor: zoom-in;" onclick="toggleZoom(event)">
+</div>
+
+<script>
+// Theme toggle
+const toggle = document.getElementById('themeToggle');
+const saved = localStorage.getItem('portfolio-theme');
+if (saved === 'light') {
+    document.documentElement.classList.add('light-theme');
+    toggle.textContent = '🌙';
+}
+toggle.addEventListener('click', () => {
+    const isLight = document.documentElement.classList.toggle('light-theme');
+    localStorage.setItem('portfolio-theme', isLight ? 'light' : 'dark');
+    toggle.textContent = isLight ? '🌙' : '☀️';
+});
+
+// Lightbox
+function openLightbox(src) {
+    document.getElementById('lightbox-overlay').style.display = 'flex';
+    document.getElementById('lightbox-img').src = src;
+}
+function closeLightbox(e) {
+    if (!e || e.target === e.currentTarget) {
+        document.getElementById('lightbox-overlay').style.display = 'none';
+    }
+}
+function toggleZoom(e) {
+    e.target.classList.toggle('zoomed');
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
 </body>
 </html>

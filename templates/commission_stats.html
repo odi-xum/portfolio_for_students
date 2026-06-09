@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Статистика — Комиссия{% endblock %}
+
+{% block content %}
+<h1 class="page-title">📊 Статистика и графики</h1>
+<p class="page-subtitle">Круговые диаграммы, гистограммы и рейтинги. Анализ по группам и студентам.</p>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.25rem;">
+    <div class="card" style="padding: 1.25rem;"><h3 class="card-title">📌 Статусы мероприятий</h3><canvas id="statusChart" style="max-height: 300px;"></canvas></div>
+    <div class="card" style="padding: 1.25rem;"><h3 class="card-title">🏷️ Категории (ОК) одобренных</h3><canvas id="categoryChart" style="max-height: 300px;"></canvas></div>
+    <div class="card" style="padding: 1.25rem;"><h3 class="card-title">⭐ Распределение оценок</h3><canvas id="scoreChart" style="max-height: 300px;"></canvas></div>
+    <div class="card" style="padding: 1.25rem;"><h3 class="card-title">🏆 Средний балл по группам</h3><canvas id="groupAvgChart" style="max-height: 300px;"></canvas></div>
+</div>
+
+<div class="card" style="padding: 1.25rem; margin-top: 1.25rem;"><h3 class="card-title">📊 Сумма баллов по группам</h3><canvas id="groupTotalChart" style="max-height: 350px;"></canvas></div>
+
+<div class="card" style="padding: 1.25rem; margin-top: 1.25rem;">
+    <h3 class="card-title">👥 Баллы студентов по группе</h3>
+    <div style="margin-bottom: 1rem;">
+        <label class="form-label">Выберите группу:</label>
+        <select id="groupSelect" class="form-select" style="max-width: 300px;">
+            <option value="">— Выберите —</option>{% for g in group_stats %}<option value="{{ g.group.id }}">{{ g.group.name }}</option>{% endfor %}
+        </select>
+    </div>
+    <canvas id="studentScoreChart" style="max-height: 350px;"></canvas>
+</div>
+
+<div class="card" style="padding: 1.25rem; margin-top: 1.25rem;">
+    <h3 class="card-title">🌟 Топ-20 студентов по сумме баллов</h3>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Студент</th><th>Группа</th><th>Мероприятий</th><th>Сумма баллов</th></tr></thead>
+            <tbody>
+                {% for t in top_students %}
+                <tr><td><strong>{{ loop.index }}</strong></td><td>{{ t.student.full_name }}</td><td>{{ t.student.group_name or '—' }}</td><td class="text-center">{{ t.event_count }}</td><td class="text-center"><strong class="text-success">{{ t.total_score }}</strong></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const colors = ['#4caf50','#2196f3','#ff9800','#9c27b0','#e91e63','#00bcd4','#ff5722','#795548','#607d8b','#8bc34a','#03a9f4','#cddc39','#673ab7','#f44336','#009688','#3f51b5','#ffeb3b','#e91e63','#00bcd4','#ff9800'];
+
+(function() {
+    var d = {{ status_dist | tojson }};
+    new Chart(document.getElementById('statusChart'), {type:'pie',data:{labels:Object.keys(d),datasets:[{data:Object.values(d),backgroundColor:['#ff9800','#4caf50','#f44336']}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#888'}}}}});
+})();
+(function() {
+    var d = {{ category_dist | tojson }};
+    new Chart(document.getElementById('categoryChart'), {type:'pie',data:{labels:Object.keys(d),datasets:[{data:Object.values(d),backgroundColor:colors.slice(0,Object.keys(d).length)}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#888'}}}}});
+})();
+(function() {
+    var d = {{ score_dist | tojson }}, k = Object.keys(d).sort((a,b)=>a-b);
+    new Chart(document.getElementById('scoreChart'), {type:'bar',data:{labels:k.map(v=>v+' балл(ов)'),datasets:[{label:'Мероприятий',data:k.map(v=>d[v]),backgroundColor:['#f44336','#ff9800','#ffeb3b','#8bc34a','#4caf50']}]},options:{responsive:true,scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#888'},grid:{color:'#333'}},x:{ticks:{color:'#888'},grid:{color:'#333'}}},plugins:{legend:{display:false}}}});
+})();
+(function() {
+    new Chart(document.getElementById('groupAvgChart'), {type:'bar',data:{labels:[{% for g in group_stats %}'{{ g.group.name }}'{% if not loop.last %},{% endif %}{% endfor %}],datasets:[{label:'Средний балл',data:[{% for g in group_stats %}{{ g.avg_score }}{% if not loop.last %},{% endif %}{% endfor %}],backgroundColor:colors.slice(0,{{ group_stats|length }})}]},options:{responsive:true,scales:{y:{min:0,max:5,ticks:{stepSize:0.5,color:'#888'},grid:{color:'#333'}},x:{ticks:{color:'#888'},grid:{color:'#333'}}},plugins:{legend:{display:false}}}});
+})();
+(function() {
+    new Chart(document.getElementById('groupTotalChart'), {type:'bar',data:{labels:[{% for g in group_stats %}'{{ g.group.name }}'{% if not loop.last %},{% endif %}{% endfor %}],datasets:[{label:'Сумма баллов',data:[{% for g in group_stats %}{{ g.total_score }}{% if not loop.last %},{% endif %}{% endfor %}],backgroundColor:colors.slice(0,{{ group_stats|length }})}]},options:{responsive:true,scales:{y:{beginAtZero:true,ticks:{color:'#888'},grid:{color:'#333'}},x:{ticks:{color:'#888'},grid:{color:'#333'}}},plugins:{legend:{display:false}}}});
+})();
+
+let studentChart = null;
+document.getElementById('groupSelect').addEventListener('change', async function() {
+    var gid = this.value;
+    if (!gid) { if(studentChart) { studentChart.destroy(); studentChart=null; } return; }
+    try {
+        var resp = await fetch('/commission/api/student_scores/'+gid), data = await resp.json();
+        var ctx = document.getElementById('studentScoreChart').getContext('2d');
+        if(studentChart) studentChart.destroy();
+        studentChart = new Chart(ctx, {type:'bar',data:{labels:data.labels,datasets:[{label:'Сумма баллов',data:data.total_scores,backgroundColor:colors.slice(0,data.labels.length)}]},options:{responsive:true,scales:{y:{beginAtZero:true,ticks:{color:'#888'},grid:{color:'#333'}},x:{ticks:{color:'#888'},grid:{color:'#333'}}},plugins:{legend:{display:false}}}});
+    } catch(e) { console.error(e); }
+});
+</script>
+{% endblock %}

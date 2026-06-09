@@ -1,87 +1,53 @@
 {% extends 'base.html' %}
-
-{% block title %}Создать мероприятие — ИС Портфолио{% endblock %}
+{% block title %}Создать мероприятие — Портфолио{% endblock %}
 
 {% block content %}
-<!-- Приветственная карточка -->
-<div class="form-card" style="margin-bottom: 2.5rem;">
-    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
-        <div style="font-size: 3rem; line-height: 1;">📝</div>
-        <div>
-            <h2 style="color: var(--fg0); margin: 0 0 0.5rem 0;">Новое мероприятие</h2>
-            <p style="color: var(--fg1); margin: 0;">
-                Добавьте достижение в ваше портфолио. После публикации пост будет отправлен куратору на проверку.
-            </p>
-        </div>
-    </div>
-</div>
+<h1 class="page-title">📝 Новое мероприятие</h1>
+<p class="page-subtitle">Добавьте достижение в портфолио. После публикации пост будет отправлен куратору на проверку.</p>
 
-<!-- Контейнер для JS-ошибок -->
 <div id="js-alert-container"></div>
 
-<!-- Форма добавления нового мероприятия -->
-<div class="form-card">
+<div class="card">
     <form id="event-form" method="POST" action="{{ url_for('student_create') }}" enctype="multipart/form-data">
-
         <div class="form-group">
-            <label for="title" style="font-weight: bold; color: var(--fg1);">Название мероприятия *</label>
-            <input type="text" id="title" name="title" class="form-control" required
-                   placeholder="Например: Участие в хакатоне 'Программисты Сибири'">
+            <label class="form-label" for="title">Название мероприятия *</label>
+            <input type="text" id="title" name="title" class="form-input" required placeholder="Например: Участие в хакатоне «Программисты Сибири»">
         </div>
-
         <div class="form-group">
-            <label for="description" style="font-weight: bold; color: var(--fg1);">Комментарий / Описание (опционально)</label>
-            <textarea id="description" name="description" class="form-control" rows="4"
-                      placeholder="Опишите вашу роль в мероприятии или добавьте заметки..."></textarea>
+            <label class="form-label" for="description">Комментарий / Описание</label>
+            <textarea id="description" name="description" class="form-textarea" rows="4" placeholder="Опишите вашу роль в мероприятии..."></textarea>
         </div>
-
         <div class="form-group">
-            <label for="category" style="font-weight: bold; color: var(--fg1);">Общая компетенция (ОК)</label>
-            <select id="category" name="category" class="form-control">
+            <label class="form-label" for="category">Общая компетенция (ОК)</label>
+            <select id="category" name="category" class="form-select">
                 <option value="">— Без категории —</option>
-                <option value="OK-1">OK-1</option>
-                <option value="OK-2">OK-2</option>
-                <option value="OK-3">OK-3</option>
-                <option value="OK-4">OK-4</option>
-                <option value="OK-5">OK-5</option>
-                <option value="OK-6">OK-6</option>
-                <option value="OK-7">OK-7</option>
-                <option value="OK-8">OK-8</option>
-                <option value="OK-9">OK-9</option>
+                {% for i in range(1, 10) %}<option value="OK-{{ i }}">OK-{{ i }}</option>{% endfor %}
             </select>
-            <small style="color: var(--gray); display: block; margin-top: 0.25rem;">
-                Выберите, к какой общей компетенции относится мероприятие. Если не уверены — оставьте «Без категории».
-            </small>
+            <span class="text-muted">Выберите, к какой компетенции относится мероприятие.</span>
         </div>
-
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-            <label for="files" style="font-weight: bold; color: var(--fg1);">Документы-доказательства (PNG, JPG, PDF) *</label>
-            <input type="file" id="files" name="files" class="form-control" multiple accept=".png, .jpg, .jpeg, .pdf" style="padding: 0.5rem;">
-            <small style="color: var(--gray); display: block; margin-top: 0.25rem;">
-                Без прикреплённого файла (сертификата, грамоты, фото) пост не будет опубликован.
-            </small>
+        <div class="form-group">
+            <label class="form-label" for="files">Документы-доказательства (PNG, JPG, PDF) *</label>
+            <input type="file" id="files" name="files" class="form-input" multiple accept=".png, .jpg, .jpeg, .pdf">
+            <span class="text-muted">Без прикреплённого файла пост не будет опубликован.</span>
         </div>
-
-        <div style="display: flex; gap: 1rem;">
-            <button type="submit" class="btn btn-success" style="padding: 0.75rem 2rem;">Опубликовать пост</button>
-            <a href="{{ url_for('student_dashboard') }}" class="btn" style="background-color: var(--bg2); color: var(--fg1); text-decoration: none; padding: 0.75rem 2rem;">Отмена</a>
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn btn-success">📤 Опубликовать пост</button>
+            <a href="{{ url_for('student_dashboard') }}" class="btn btn-ghost">✕ Отмена</a>
         </div>
     </form>
 </div>
 
 <script>
 document.getElementById('event-form').addEventListener('submit', function(e) {
-    const fileInput = document.getElementById('files');
-    const alertContainer = document.getElementById('js-alert-container');
+    var fileInput = document.getElementById('files');
+    var alertContainer = document.getElementById('js-alert-container');
     alertContainer.innerHTML = '';
-
     if (fileInput.files.length === 0) {
         e.preventDefault();
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert alert-danger';
-        alertDiv.style.marginBottom = '1.5rem';
-        alertDiv.innerText = 'Внимание: Не хватает доказательств для присутствия на мероприятии. Загрузка файлов (PNG, JPG или PDF) обязательна.';
-        alertContainer.appendChild(alertDiv);
+        var div = document.createElement('div');
+        div.className = 'alert alert-danger';
+        div.textContent = 'Внимание: загрузка файлов (PNG, JPG или PDF) обязательна.';
+        alertContainer.appendChild(div);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 });

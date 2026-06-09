@@ -50,3 +50,7 @@ AGENTS.md
 .dockerignore
 Dockerfile
 docker-compose*.yml
+
+docx/
+*.docx
+*.txt

@@ -24,24 +24,27 @@ router = APIRouter()
 
 
 @router.get('/curator/dashboard')
-async def curator_dashboard(request: Request, user: User = Depends(require_curator)):
-    stats = get_curator_dashboard_stats(user)
+async def curator_dashboard(request: Request, user: User = Depends(require_curator),
+                             db: Session = Depends(get_db)):
+    stats = get_curator_dashboard_stats(db, user)
     groups = user.curated_groups
-    students = get_curator_students(user)
+    students = get_curator_students(db, user)
     return render(request, 'curator.html', pending_count=stats['pending'],
                    approved_count=stats['approved'], rejected_count=stats['rejected'],
                    total_resolved=stats['total_resolved'], groups=groups, students=students)
 
 
 @router.get('/curator/pending')
-async def curator_pending(request: Request, user: User = Depends(require_curator)):
-    events = get_curator_events(user, EventStatus.PENDING)
+async def curator_pending(request: Request, user: User = Depends(require_curator),
+                           db: Session = Depends(get_db)):
+    events = get_curator_events(db, user, EventStatus.PENDING)
     return render(request, 'curator_pending.html', events=events)
 
 
 @router.get('/curator/resolved')
-async def curator_resolved(request: Request, user: User = Depends(require_curator)):
-    events = get_curator_events(user, 'resolved')
+async def curator_resolved(request: Request, user: User = Depends(require_curator),
+                            db: Session = Depends(get_db)):
+    events = get_curator_events(db, user, 'resolved')
     return render(request, 'curator_resolved.html', events=events)
 
 
@@ -53,12 +56,14 @@ async def curator_evaluate(request: Request, event_id: int,
     db = next(get_db())
     try:
         event = db.get(Event, event_id)
-        if not event: return RedirectResponse(url='/curator/pending', status_code=302)
+        if not event:
+            return RedirectResponse(url='/curator/pending', status_code=302)
 
         if action == 'approve':
-            event.score = score; event.curator_comment = comment or None
+            event.score = score
+            event.curator_comment = comment or None
             event.status = EventStatus.APPROVED
-            notify_user(event.student_id,
+            notify_user(db, event.student_id,
                 f"Куратор одобрил ваше мероприятие «{event.title}» с оценкой {score}.",
                 f'/event/{event.id}')
             log_audit(db, user, 'event_approve',
@@ -70,7 +75,7 @@ async def curator_evaluate(request: Request, event_id: int,
                 return RedirectResponse(url='/curator/pending', status_code=302)
             event.curator_comment = comment
             event.status = EventStatus.REJECTED
-            notify_user(event.student_id,
+            notify_user(db, event.student_id,
                 f"Куратор отклонил ваше мероприятие «{event.title}». Причина: {comment}",
                 f'/event/{event.id}')
             log_audit(db, user, 'event_reject',
@@ -158,7 +163,8 @@ async def curator_portfolio_zip(request: Request, user: User = Depends(require_c
     with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for student in students:
             pdf_buf = generate_portfolio_pdf(student.username)
-            if pdf_buf is None: continue
+            if pdf_buf is None:
+                continue
             safe_name = student.username.replace('/', '_').replace('\\', '_')
             zf.writestr(f'portfolio_{safe_name}.pdf', pdf_buf.getvalue())
     zip_buf.seek(0)
@@ -183,7 +189,7 @@ async def curator_student_ok(request: Request, student_id: int,
         if student.group_id not in curator_gids:
             return RedirectResponse(url='/curator/dashboard', status_code=302)
 
-        ok_stats = get_ok_stats(student_id)
+        ok_stats = get_ok_stats(db, student_id)
         current_category = request.query_params.get('category')
 
         if current_category == 'none':
@@ -212,14 +218,16 @@ async def curator_toggle_ok(request: Request, student_id: int, ok_category: str,
     if ok_category not in OK_LIST:
         request.session['flash'] = {'type': 'danger', 'message': f'Некорректная категория: {ok_category}'}
         return RedirectResponse(url='/curator/dashboard', status_code=302)
-    added = toggle_override(student_id, user.id, ok_category)
-    label = 'засчитана' if added else 'отменена'
+
     db = next(get_db())
     try:
+        added = toggle_override(db, student_id, user.id, ok_category)
+        label = 'засчитана' if added else 'отменена'
         log_audit(db, user, f'ok_{"override" if added else "undo"}',
                   f'{label.capitalize()} {ok_category} для студента #{student_id}')
     finally:
         db.close()
+
     request.session['flash'] = {'type': 'success' if added else 'warning',
                                  'message': f'Категория {ok_category} {label} для студента.'}
     return RedirectResponse(url=f'/curator/student_ok/{student_id}', status_code=302)

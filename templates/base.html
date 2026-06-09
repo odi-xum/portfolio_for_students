@@ -9,70 +9,130 @@
 <body
     data-csrf-token="{{ csrf_token }}"
     data-user-authenticated="{{ 'true' if current_user else 'false' }}"
+    data-user-role="{{ current_user.role if current_user else '' }}"
 >
 
-    <button class="theme-toggle theme-toggle-login" id="themeToggleLogin" title="Сменить тему">☀️</button>
-
-    {% if current_user %}
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <button class="theme-toggle" id="themeToggle" title="Сменить тему">☀️</button>
-            ИС Портфолио
+{% if current_user %}
+<header class="app-header">
+    <div class="app-header-left">
+        <div class="brand">
+            <div class="brand-icon">📋</div>
+            <span>Портфолио</span>
         </div>
-        <div class="navbar-user">
-            <a href="/notifications" style="color: var(--fg1); text-decoration: none; margin-right: 1rem; position: relative;">
-                🔔 <span id="unread-badge" style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:0.7rem; font-weight:bold; border-radius:50%; min-width:16px; height:16px; text-align:center; line-height:16px; padding:0 3px;"></span>
-            </a>
-            <a href="/profile" style="color: var(--fg1); text-decoration: none; margin-right: 0.75rem;">👤</a>
-            Роль: <strong>{{ current_user.role }}</strong> |
-            {% if current_user.last_name or current_user.first_name %}
-            {{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}
-            {% else %}
-            {{ current_user.username }}
-            {% endif %}
-            <a href="/logout" class="logout-link">Выйти</a>
-        </div>
-    </nav>
+    </div>
+    <div class="app-header-right">
+        <a href="/notifications" style="position: relative; color: var(--fg1); text-decoration: none;">
+            🔔
+            <span id="unread-badge" style="display:none;"></span>
+        </a>
 
-    <nav class="role-nav">
-        <ul>
-            {% if current_user.role == 'admin' %}
-            <li><a href="/admin/dashboard">Панель</a></li>
-            <li><a href="/admin/users">Пользователи</a></li>
-            <li><a href="/admin/groups">Группы</a></li>
-            <li><a href="/admin/audit">Аудит</a></li>
-            {% elif current_user.role == 'student' %}
-            <li><a href="/student/dashboard">Моя панель</a></li>
-            <li><a href="/student/create">Создать пост</a></li>
-            <li><a href="/student/history">История</a></li>
-            <li><a href="/rating">Рейтинг</a></li>
-            {% elif current_user.role == 'curator' %}
-            <li><a href="/curator/dashboard">Панель куратора</a></li>
-            <li><a href="/curator/pending">Заявки</a></li>
-            <li><a href="/curator/resolved">Журнал</a></li>
-            <li><a href="/rating">Рейтинг</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+        <button class="btn btn-ghost btn-sm" id="themeToggle" title="Сменить тему" style="padding: 0.3rem 0.6rem; font-size: 0.9rem;">☀️</button>
+
+        <div class="user-pill">
+            <div class="avatar">{{ current_user.last_name[:1] or current_user.username[:1] | upper }}</div>
+            <div style="display: flex; flex-direction: column; gap: 1px;">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--fg0); line-height: 1.2;">
+                    {{ current_user.full_name }}
+                </span>
+                <span class="role-badge">{{ current_user.role }}</span>
+            </div>
+        </div>
+
+        <a href="/logout" class="btn btn-ghost btn-sm">Выйти</a>
+    </div>
+</header>
+
+<nav class="top-nav" id="topNav">
+    {% if current_user.role == 'admin' %}
+    <a href="/admin/dashboard">📊 Панель</a>
+    <a href="/admin/users">👥 Пользователи</a>
+    <a href="/admin/groups">🏛️ Группы</a>
+    <a href="/admin/audit">📋 Аудит</a>
+    {% elif current_user.role == 'student' %}
+    <a href="/student/dashboard">📊 Панель</a>
+    <a href="/student/create">📝 Создать</a>
+    <a href="/student/history">📋 История</a>
+    <a href="/rating">🏆 Рейтинг</a>
+    {% elif current_user.role == 'curator' %}
+    <a href="/curator/dashboard">📊 Панель</a>
+    <a href="/curator/pending">📥 Заявки</a>
+    <a href="/curator/resolved">📋 Журнал</a>
+    <a href="/rating">🏆 Рейтинг</a>
+    {% elif current_user.role == 'commission' %}
+    <a href="/commission/dashboard">📊 Панель</a>
+    <a href="/commission/posts">📋 Посты</a>
+    <a href="/commission/students">👥 Студенты</a>
+    <a href="/commission/stats">📈 Статистика</a>
     {% endif %}
+</nav>
 
-    <div class="container">
-        {% if flash %}
-        <div class="alert alert-{{ flash.type }}">{{ flash.message }}</div>
-        {% endif %}
-        {% block content %}{% endblock %}
-    </div>
-
-<div id="lightbox-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9999; cursor:pointer;" onclick="closeLightbox(event)">
-    <button onclick="closeLightbox()" style="position:absolute; top:1rem; right:1.5rem; color:#fff; font-size:2.5rem; background:none; border:none; cursor:pointer; z-index:10001; line-height:1; padding:0.25rem;" title="Закрыть (Esc)">&times;</button>
-    <div style="position:absolute; bottom:1.5rem; left:50%; transform:translateX(-50%); color:var(--gray); font-size:0.85rem; z-index:10001; text-align:center; pointer-events:none;">
-        Клик по изображению &mdash; приблизить/отдалить &middot; Клик вне изображения или Esc &mdash; закрыть
-    </div>
-    <img id="lightbox-img" style="max-width:90vw; max-height:90vh; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); object-fit:contain; cursor:zoom-in; border-radius:4px; box-shadow:0 0 30px rgba(0,0,0,0.5);" onclick="toggleZoom(event)">
+<div class="container">
+    {% if flash %}
+    <div class="alert alert-{{ flash.type }}">{{ flash.message }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
 </div>
+
+{% else %}
+<!-- ── Login page ───────────────────────────────────────────────────── -->
+<div class="container">
+    {% block login_content %}{% endblock %}
+</div>
+{% endif %}
+
+<!-- Theme toggle for login page only -->
+{% if not current_user %}
+<button class="btn btn-ghost btn-sm" id="themeToggle"
+        style="position: fixed; top: 1rem; right: 1rem; z-index: 1000; background: var(--bg1); border: 1px solid var(--bg3); border-radius: var(--radius); padding: 0.4rem 0.6rem;">
+    ☀️
+</button>
+{% endif %}
+
+<!-- Lightbox -->
+<div id="lightbox-overlay" class="lightbox-overlay" style="display:none;" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightbox()" title="Закрыть (Esc)">&times;</button>
+    <img id="lightbox-img" class="lightbox-img" style="cursor: zoom-in;" onclick="toggleZoom(event)">
+</div>
+
+<!-- Приветственное модальное окно для студентов и кураторов -->
+{% if current_user and (current_user.role == 'student' or current_user.role == 'curator') %}
+<div id="welcome-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeWelcomeModal()">&times;</button>
+        <h2 style="margin-bottom: 1rem; font-size: 1.25rem;">📋 О системе «Портфолио студентов»</h2>
+        <div style="font-size: 0.9rem; line-height: 1.65; color: var(--fg1);">
+            <p style="margin-bottom: 0.75rem;"><strong style="color: var(--fg0);">Система предназначена для учёта достижений студентов.</strong></p>
+            <p style="margin-bottom: 0.5rem;">🔹 <strong style="color: var(--fg0);">Как это работает:</strong></p>
+            <ul style="padding-left: 1.2rem; margin-bottom: 0.75rem;">
+                <li>Студент публикует мероприятие и прикрепляет подтверждающие файлы.</li>
+                <li>Куратор проверяет и выставляет оценку от <strong style="color: var(--red);">1</strong> до <strong style="color: var(--green);">5</strong> баллов.</li>
+                <li>Чем выше оценка — тем значимее мероприятие.</li>
+                <li>Баллы суммируются и формируют рейтинг студента и группы.</li>
+            </ul>
+            <p style="margin-bottom: 0.5rem;">🔹 <strong style="color: var(--fg0);">Оценивание:</strong></p>
+            <ul style="padding-left: 1.2rem; margin-bottom: 0.75rem;">
+                <li><strong style="color: var(--green);">5 баллов</strong> — выдающееся достижение</li>
+                <li><strong>4 балла</strong> — значительное достижение</li>
+                <li><strong>3 балла</strong> — хорошее достижение</li>
+                <li><strong>2 балла</strong> — базовое участие</li>
+                <li><strong style="color: var(--red);">1 балл</strong> — минимальное участие</li>
+            </ul>
+            <p style="margin-bottom: 0.75rem;">🔹 <strong style="color: var(--fg0);">Общие компетенции (ОК):</strong> ОК-1…ОК-9. Минимум 3 мероприятия в категории для выполнения.</p>
+            <p style="padding: 0.5rem; background: var(--bg2); border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--fg2);">
+                📊 Комиссия на основе оценок вычисляет лучшую учебную группу. Следите за рейтингом.
+            </p>
+        </div>
+        <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--fg2); cursor: pointer;">
+                <input type="checkbox" id="welcome-dont-show" class="form-checkbox"> Больше не показывать
+            </label>
+            <button onclick="closeWelcomeModal()" class="btn btn-primary">Понятно</button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <script src="/static/js/app.js"></script>
 {% block scripts %}{% endblock %}
-
 </body>
 </html>

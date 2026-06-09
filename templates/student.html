@@ -1,106 +1,55 @@
 {% extends 'base.html' %}
-
-{% block title %}Моя панель — ИС Портфолио{% endblock %}
+{% block title %}Моя панель — Портфолио{% endblock %}
 
 {% block content %}
-<div class="form-card" style="margin-bottom: 2.5rem;">
-    <div class="flex-row">
-        <div class="welcome-icon">🎓</div>
-        <div>
-            <h2 class="welcome-title">Добро пожаловать, {% if current_user.last_name or current_user.first_name %}{{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}{% else %}{{ current_user.username }}{% endif %}</h2>
-            <p class="welcome-text">
-                Добро пожаловать в систему портфолио! Здесь вы можете публиковать свои достижения
-                и отслеживать их статус проверки.
-            </p>
-        </div>
-    </div>
-</div>
+<h1 class="page-title">🎓 Моя панель</h1>
+<p class="page-subtitle">Публикуйте достижения и отслеживайте статус проверки.</p>
 
 <div class="stat-grid">
-    <div class="form-card stat-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-label">Всего постов</div>
-        <div class="stat-value c-blue">{{ total }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-label">Одобрено</div>
-        <div class="stat-value c-green">{{ approved }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">⏳</div>
-        <div class="stat-label">На проверке</div>
-        <div class="stat-value c-yellow">{{ pending }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">❌</div>
-        <div class="stat-label">Отклонено</div>
-        <div class="stat-value c-orange">{{ rejected }}</div>
-    </div>
+    <div class="stat-card stat-blue"><div class="stat-icon">📊</div><div class="stat-value">{{ total }}</div><div class="stat-label">Всего постов</div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-value">{{ approved }}</div><div class="stat-label">Одобрено</div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-value">{{ pending }}</div><div class="stat-label">На проверке</div></div>
+    <div class="stat-card stat-danger"><div class="stat-icon">❌</div><div class="stat-value">{{ rejected }}</div><div class="stat-label">Отклонено</div></div>
 </div>
 
 <div class="action-grid">
-    <a href="{{ url_for('student_create') }}" class="form-card action-card">
-        <div class="action-icon">📝</div>
-        <div>
-            <h3>Создать мероприятие</h3>
-            <p>Добавить новое достижение или сертификат к себе в портфолио</p>
-        </div>
+    <a href="{{ url_for('student_create') }}" class="action-card">
+        <div class="action-icon">📝</div><div><h3>Создать мероприятие</h3><p>Добавить новое достижение в портфолио</p></div>
     </a>
-
-    <a href="{{ url_for('student_history') }}" class="form-card action-card">
-        <div class="action-icon">📋</div>
-        <div>
-            <h3>История постов</h3>
-            <p>Просмотр всех публикаций и статусов их проверки</p>
-        </div>
+    <a href="{{ url_for('student_history') }}" class="action-card">
+        <div class="action-icon">📋</div><div><h3>История постов</h3><p>Просмотр всех публикаций и статусов</p></div>
     </a>
-
-    <a href="{{ url_for('rating') }}" class="form-card action-card">
-        <div class="action-icon">🏆</div>
-        <div>
-            <h3>Рейтинг</h3>
-            <p>Сводная таблица с баллами группы</p>
-        </div>
+    <a href="{{ url_for('rating') }}" class="action-card">
+        <div class="action-icon">🏆</div><div><h3>Рейтинг</h3><p>Сводная таблица с баллами группы</p></div>
     </a>
-
-    <a href="{{ url_for('student_portfolio_pdf') }}" class="form-card action-card">
-        <div class="action-icon">📄</div>
-        <div>
-            <h3>Экспорт портфолио</h3>
-            <p>Скачать портфолио в PDF для печати</p>
-        </div>
+    <a href="{{ url_for('student_portfolio_pdf') }}" class="action-card">
+        <div class="action-icon">📄</div><div><h3>Экспорт портфолио</h3><p>Скачать портфолио в PDF для печати</p></div>
     </a>
 </div>
 
 {% if ok_stats %}
-<div class="form-card" style="margin-bottom: 2rem;">
-    <h3 style="color: var(--fg0); margin-bottom: 1rem;">Общие компетенции (ОК)</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem;">
+<div class="card">
+    <h3 class="card-title">Общие компетенции (ОК)</h3>
+    <div class="ok-grid">
         {% for ok in ok_stats %}
-        <div style="padding: 0.75rem; text-align: center; border-radius: 6px;
-                    background: var(--bg1); border: 1px solid var(--bg3);
-                    {% if ok.done %}border-color: var(--green);{% endif %}">
-            <div style="font-size: 1.5rem; line-height: 1; margin-bottom: 0.25rem;">
+        <div class="ok-item{% if ok.done %} done{% endif %}">
+            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">
                 {% if ok.done %}✅{% elif ok.approved > 0 %}⏳{% else %}⬜{% endif %}
             </div>
-            <div style="font-weight: bold; font-size: 0.9rem; color: var(--fg0);">{{ ok.ok }}</div>
-            <div style="font-size: 0.8rem; color: var(--gray);">
+            <div style="font-weight: 600; font-size: 0.9rem;">{{ ok.ok }}</div>
+            <div class="text-sm text-muted">
                 {{ ok.approved }}/3 одобрено
                 {% if ok.pending > 0 %}<br>⏳ {{ ok.pending }} на проверке{% endif %}
-                {% if ok.has_override %}<br><span style="color: var(--green);">✓ засчитано куратором</span>{% endif %}
+                {% if ok.has_override %}<br><span class="text-success">✓ засчитано</span>{% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
     {% if ok_all_done %}
     <form action="{{ url_for('student_notify_ok') }}" method="POST" style="margin-top: 1rem; text-align: center;">
-        <button type="submit" class="btn btn-success" style="padding: 0.6rem 1.5rem;">
-            📨 Уведомить куратора о выполнении ОК
-        </button>
+        <button type="submit" class="btn btn-success">📨 Уведомить куратора о выполнении ОК</button>
     </form>
     {% endif %}
 </div>
 {% endif %}
-
 {% endblock %}

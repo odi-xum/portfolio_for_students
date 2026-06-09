@@ -1,16 +1,9 @@
 {% extends 'base.html' %}
-{% block title %}Ошибка сервера — ИС Портфолио{% endblock %}
+{% block title %}500 — Портфолио{% endblock %}
 {% block content %}
-<div style="text-align: center; padding: 4rem 1rem;">
-    <div style="font-size: 5rem; line-height: 1; margin-bottom: 1rem;">⚠️</div>
-    <h1 style="color: var(--red); margin-bottom: 1rem;">500 — Внутренняя ошибка сервера</h1>
-    <p style="color: var(--fg1); font-size: 1.1rem; max-width: 500px; margin: 0 auto;">
-        Произошла непредвиденная ошибка. Администратор уже уведомлен. Попробуйте повторить попытку позже.
-    </p>
-    <a href="{{ url_for('login') if not current_user.is_authenticated else '#' }}"
-       class="btn btn-primary" style="margin-top: 2rem; display: inline-block;
-       {% if current_user.is_authenticated %}display:none;{% endif %}">
-        На главную
-    </a>
+<div class="text-center" style="padding: 4rem 1rem;">
+    <div class="empty-icon" style="font-size: 4rem;">⚠️</div>
+    <h1 style="font-size: 1.75rem; margin: 1rem 0; color: var(--danger);">500 — Ошибка сервера</h1>
+    <p class="text-muted" style="max-width: 480px; margin: 0 auto;">Произошла непредвиденная ошибка. Попробуйте позже.</p>
 </div>
 {% endblock %}

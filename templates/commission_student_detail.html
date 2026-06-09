@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}{{ student.full_name }} — Комиссия{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('commission_students') }}" class="btn btn-ghost btn-sm mb-2">← Назад к списку</a>
+    <h1 class="page-title">👤 {{ student.full_name }}</h1>
+    <p class="text-muted">Логин: {{ student.username }} · Группа: {{ student.group_name or '—' }} · Баллов: <strong class="text-success">{{ approved_total }}</strong></p>
+</div>
+
+{% if events %}
+<div class="post-list">
+    {% for event in events %}
+    <div class="post-card status-{% if event.is_pending %}pending{% elif event.is_approved %}approved{% else %}rejected{% endif %}">
+        <div class="post-card-header">
+            <h3 class="post-card-title">{{ event.title }}</h3>
+            <div style="display: flex; gap: 0.35rem;">
+                <span class="badge badge-{% if event.is_pending %}warning{% elif event.is_approved %}approved{% else %}rejected{% endif %}">{{ event.status_label }}</span>
+                {% if event.score %}<span class="badge badge-blue">⭐ {{ event.score }}</span>{% endif %}
+            </div>
+        </div>
+        {% if event.description %}<div class="post-card-body">{{ event.description }}</div>{% endif %}
+        <div class="post-card-meta">
+            <span>{{ event.category_label }}</span>
+            <span>{{ event.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            {% if event.curator_comment %}<span>Комментарий: {{ event.curator_comment }}</span>{% endif %}
+        </div>
+        {% if event.files %}
+        <div class="post-card-files">
+            {% for f in event.files %}
+            {% if f.is_image %}<img src="/{{ f.file_path }}" class="post-thumb" onclick="openLightbox('/{{ f.file_path }}')">
+            {% else %}<a href="/{{ f.file_path }}" target="_blank" class="file-pill">📄 PDF</a>{% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><div class="empty-icon">📭</div><p>У студента пока нет мероприятий.</p></div>
+{% endif %}
+{% endblock %}

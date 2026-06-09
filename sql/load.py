@@ -114,7 +114,7 @@ def load_data():
         db.add(admin)
 
         # ── Комиссия ─────────────────────────────────────────────────────
-        commission = User(username='commission', password_hash=hash_password('111'), role='curator',
+        commission = User(username='commission', password_hash=hash_password('111'), role='commission',
                           last_name='Председатель', first_name='Комиссии', patronymic='')
         db.add(commission)
 

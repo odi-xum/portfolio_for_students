@@ -143,11 +143,13 @@ from routes.api import router as api_router
 from routes.rating import router as rating_router
 from routes.profile import router as profile_router
 from routes.portfolio import router as portfolio_router
+from routes.commission import router as commission_router
 
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(student_router)
 app.include_router(curator_router)
+app.include_router(commission_router)
 app.include_router(api_router)
 app.include_router(rating_router)
 app.include_router(profile_router)

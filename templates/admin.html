@@ -1,119 +1,47 @@
 {% extends 'base.html' %}
-
-{% block title %}Панель администратора — ИС Портфолио{% endblock %}
+{% block title %}Панель администратора — Портфолио{% endblock %}
 
 {% block content %}
-<div class="form-card" style="margin-bottom: 2.5rem;">
-    <div class="flex-row">
-        <div class="welcome-icon">🔧</div>
-        <div>
-            <h2 class="welcome-title">Добро пожаловать, {% if current_user.last_name or current_user.first_name %}{{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}{% else %}{{ current_user.username }}{% endif %}</h2>
-            <p class="welcome-text">
-                Панель администратора системы. Управляйте пользователями, учебными группами
-                и импортируйте студентов.
-            </p>
-        </div>
-    </div>
-</div>
+<h1 class="page-title">🔧 Панель администратора</h1>
+<p class="page-subtitle">Управление пользователями, учебными группами и импорт студентов.</p>
 
 {% if stats %}
 <div class="stat-grid">
-    <div class="form-card stat-card">
-        <div class="stat-icon">👥</div>
-        <div class="stat-label">Пользователей</div>
-        <div class="stat-value c-blue">{{ stats.users_count }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">🎓</div>
-        <div class="stat-label">Студентов</div>
-        <div class="stat-value c-green">{{ stats.students_count }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">👤</div>
-        <div class="stat-label">Кураторов</div>
-        <div class="stat-value c-orange">{{ stats.curators_count }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">🏛️</div>
-        <div class="stat-label">Групп</div>
-        <div class="stat-value c-purple">{{ stats.groups_count }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">📝</div>
-        <div class="stat-label">Всего постов</div>
-        <div class="stat-value" style="color: var(--fg0);">{{ stats.events_total }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">⏳</div>
-        <div class="stat-label">На проверке</div>
-        <div class="stat-value c-yellow">{{ stats.events_pending }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">📚</div>
-        <div class="stat-label">Отделений</div>
-        <div class="stat-value c-blue">{{ stats.dept_count }}</div>
-    </div>
+    <div class="stat-card stat-blue"><div class="stat-icon">👥</div><div class="stat-value">{{ stats.users_count }}</div><div class="stat-label">Пользователей</div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">🎓</div><div class="stat-value">{{ stats.students_count }}</div><div class="stat-label">Студентов</div></div>
+    <div class="stat-card stat-orange"><div class="stat-icon">👤</div><div class="stat-value">{{ stats.curators_count }}</div><div class="stat-label">Кураторов</div></div>
+    <div class="stat-card stat-purple"><div class="stat-icon">🏛️</div><div class="stat-value">{{ stats.groups_count }}</div><div class="stat-label">Групп</div></div>
+    <div class="stat-card stat-aqua"><div class="stat-icon">📝</div><div class="stat-value">{{ stats.events_total }}</div><div class="stat-label">Всего постов</div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-value">{{ stats.events_pending }}</div><div class="stat-label">На проверке</div></div>
+    <div class="stat-card stat-blue"><div class="stat-icon">📚</div><div class="stat-value">{{ stats.dept_count }}</div><div class="stat-label">Отделений</div></div>
 </div>
 {% endif %}
 
 <div class="action-grid">
-    <a href="{{ url_for('admin_users') }}" class="form-card action-card">
-        <div class="action-icon">👥</div>
-        <div>
-            <h3>Пользователи</h3>
-            <p>Управление учётными записями, ролями и импорт</p>
-        </div>
+    <a href="{{ url_for('admin_users') }}" class="action-card">
+        <div class="action-icon">👥</div><div><h3>Пользователи</h3><p>Управление учётными записями, ролями и импорт</p></div>
     </a>
-
-    <a href="{{ url_for('admin_groups') }}" class="form-card action-card">
-        <div class="action-icon">🏛️</div>
-        <div>
-            <h3>Группы</h3>
-            <p>Управление учебными группами, отделениями и специальностями</p>
-        </div>
+    <a href="{{ url_for('admin_groups') }}" class="action-card">
+        <div class="action-icon">🏛️</div><div><h3>Группы</h3><p>Управление группами, отделениями и специальностями</p></div>
     </a>
-
-    <a href="{{ url_for('admin_audit') }}" class="form-card action-card">
-        <div class="action-icon">📋</div>
-        <div>
-            <h3>Аудит</h3>
-            <p>Лог действий всех пользователей системы</p>
-        </div>
+    <a href="{{ url_for('admin_audit') }}" class="action-card">
+        <div class="action-icon">📋</div><div><h3>Аудит</h3><p>Лог действий всех пользователей системы</p></div>
     </a>
 </div>
 
-<details style="margin-bottom: 2rem;">
-    <summary style="color: var(--blue); font-weight: bold; cursor: pointer; font-size: 1.05rem;">
-        📖 Как импортировать студентов из JSON-файла
-    </summary>
-    <div style="margin-top: 1rem; border-top: 1px solid var(--bg2); padding-top: 1rem; color: var(--fg1); line-height: 1.7;">
-        <p><strong>Формат JSON:</strong></p>
-        <pre style="background-color: var(--bg2); padding: 0.75rem; border-radius: 4px; font-size: 0.85rem;">[{"username":"petrov","password":"111","group":"ИСП-Б-2022"}]</pre>
-        <p>Создайте группы на странице <strong>«Группы»</strong>, затем импортируйте JSON на странице <strong>«Пользователи»</strong>.</p>
-    </div>
-</details>
-
 {% if dept_stats %}
-<h2 style="margin-bottom: 1rem; margin-top: 2rem; color: var(--fg1);">📊 Статистика по отделениям</h2>
-<div class="table-responsive">
-    <table>
-        <thead>
-            <tr>
-                <th>Отделение</th>
-                <th>Групп</th>
-                <th>Студентов</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for d in dept_stats %}
-            <tr>
-                <td>{{ d.name }}</td>
-                <td style="text-align: center;">{{ d.groups }}</td>
-                <td style="text-align: center;">{{ d.students }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card">
+    <h3 class="card-title">📊 Статистика по отделениям</h3>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Отделение</th><th>Групп</th><th>Студентов</th></tr></thead>
+            <tbody>
+                {% for d in dept_stats %}
+                <tr><td>{{ d.name }}</td><td class="text-center">{{ d.groups }}</td><td class="text-center">{{ d.students }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

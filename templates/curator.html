@@ -1,69 +1,27 @@
 {% extends 'base.html' %}
-
-{% block title %}Панель куратора — ИС Портфолио{% endblock %}
+{% block title %}Панель куратора — Портфолио{% endblock %}
 
 {% block content %}
-<div class="form-card" style="margin-bottom: 2.5rem;">
-    <div class="flex-row">
-        <div class="welcome-icon">📋</div>
-        <div>
-            <h2 class="welcome-title">Добро пожаловать, {% if current_user.last_name or current_user.first_name %}{{ current_user.last_name or '' }} {{ current_user.first_name or '' }} {{ current_user.patronymic or '' }}{% else %}{{ current_user.username }}{% endif %}</h2>
-            <p class="welcome-text">
-                Панель управления группами{% if groups %}: <strong style="color: var(--blue);">{% for g in groups %}{{ g.name }}{% if not loop.last %}, {% endif %}{% endfor %}</strong>{% endif %}.
-                Проверяйте публикации студентов и выставляйте оценки.
-            </p>
-        </div>
-    </div>
-</div>
+<h1 class="page-title">📋 Панель куратора</h1>
+<p class="page-subtitle">{% if groups %}Группы: {% for g in groups %}<strong style="color: var(--blue);">{{ g.name }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}. Проверяйте публикации студентов и выставляйте оценки.</p>
 
 <div class="stat-grid">
-    <div class="form-card stat-card">
-        <div class="stat-icon">⏳</div>
-        <div class="stat-label">На проверке</div>
-        <div class="stat-value c-yellow">{{ pending_count }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-label">Одобрено</div>
-        <div class="stat-value c-green">{{ approved_count }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">❌</div>
-        <div class="stat-label">Отклонено</div>
-        <div class="stat-value c-orange">{{ rejected_count }}</div>
-    </div>
-    <div class="form-card stat-card">
-        <div class="stat-icon">📚</div>
-        <div class="stat-label">Всего решено</div>
-        <div class="stat-value c-purple">{{ total_resolved }}</div>
-    </div>
+    <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-value">{{ pending_count }}</div><div class="stat-label">На проверке</div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-value">{{ approved_count }}</div><div class="stat-label">Одобрено</div></div>
+    <div class="stat-card stat-danger"><div class="stat-icon">❌</div><div class="stat-value">{{ rejected_count }}</div><div class="stat-label">Отклонено</div></div>
+    <div class="stat-card stat-purple"><div class="stat-icon">📚</div><div class="stat-value">{{ total_resolved }}</div><div class="stat-label">Всего решено</div></div>
 </div>
 
-<!-- Студенты -->
 {% if students %}
-<div class="form-card" style="margin-bottom: 2rem;">
-    <h3 class="section-heading">👥 Студенты</h3>
-    <div class="table-responsive">
+<div class="card">
+    <h3 class="card-title">👥 Студенты</h3>
+    <div class="table-wrap">
         <table>
-            <thead>
-                <tr>
-                    <th>ФИО</th>
-                    <th>Группа</th>
-                    <th>ОК</th>
-                </tr>
-            </thead>
+            <thead><tr><th>ФИО</th><th>Группа</th><th>ОК</th></tr></thead>
             <tbody>
                 {% for s in students %}
-                <tr>
-                    <td>{{ s.full_name }}</td>
-                    <td>{{ s.group_name or '—' }}</td>
-                    <td>
-                        <a href="{{ url_for('curator_student_ok', student_id=s.id) }}" class="btn"
-                           style="padding: 0.2rem 0.75rem; font-size: 0.85rem; background: var(--bg2); color: var(--fg1); text-decoration: none;">
-                            📋 ОК
-                        </a>
-                    </td>
-                </tr>
+                <tr><td>{{ s.full_name }}</td><td>{{ s.group_name or '—' }}</td>
+                    <td><a href="{{ url_for('curator_student_ok', student_id=s.id) }}" class="btn btn-ghost btn-sm">📋 ОК</a></td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -72,36 +30,17 @@
 {% endif %}
 
 <div class="action-grid">
-    <a href="{{ url_for('curator_pending') }}" class="form-card action-card">
-        <div class="action-icon">📥</div>
-        <div>
-            <h3>Текущие заявки</h3>
-            <p>Проверка новых публикаций студентов с поиском</p>
-        </div>
+    <a href="{{ url_for('curator_pending') }}" class="action-card">
+        <div class="action-icon">📥</div><div><h3>Текущие заявки</h3><p>Проверка новых публикаций студентов</p></div>
     </a>
-
-    <a href="{{ url_for('curator_resolved') }}" class="form-card action-card">
-        <div class="action-icon">📋</div>
-        <div>
-            <h3>Журнал решений</h3>
-            <p>История вынесенных оценок и решений с поиском</p>
-        </div>
+    <a href="{{ url_for('curator_resolved') }}" class="action-card">
+        <div class="action-icon">📋</div><div><h3>Журнал решений</h3><p>История вынесенных оценок и решений</p></div>
     </a>
-
-    <a href="{{ url_for('curator_export') }}" class="form-card action-card">
-        <div class="action-icon">📊</div>
-        <div>
-            <h3>Экспорт в Excel</h3>
-            <p>Сводка, детализация и графики по студентам группы</p>
-        </div>
+    <a href="{{ url_for('curator_export') }}" class="action-card">
+        <div class="action-icon">📊</div><div><h3>Экспорт в Excel</h3><p>Сводка, детализация и графики по студентам</p></div>
     </a>
-
-    <a href="{{ url_for('rating') }}" class="form-card action-card">
-        <div class="action-icon">🏆</div>
-        <div>
-            <h3>Рейтинг студентов</h3>
-            <p>Сводная таблица с баллами группы</p>
-        </div>
+    <a href="{{ url_for('rating') }}" class="action-card">
+        <div class="action-icon">🏆</div><div><h3>Рейтинг студентов</h3><p>Сводная таблица с баллами группы</p></div>
     </a>
 </div>
 {% endblock %}

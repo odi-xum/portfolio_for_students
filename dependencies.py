@@ -87,6 +87,7 @@ def require_role(role: str):
     return _check
 
 
-require_admin   = require_role('admin')
-require_curator = require_role('curator')
-require_student = require_role('student')
+require_admin      = require_role('admin')
+require_curator    = require_role('curator')
+require_student    = require_role('student')
+require_commission = require_role('commission')

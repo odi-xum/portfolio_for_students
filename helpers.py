@@ -6,7 +6,6 @@ import hashlib, os, secrets
 from datetime import date, datetime, timezone
 from typing import Optional
 from fastapi import Request
-from starlette.datastructures import MutableHeaders
 from constants import ALLOWED_EXTENSIONS, CSRF_TOKEN_BYTES
 
 BASE_UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), 'diplom'))
